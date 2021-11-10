@@ -1,0 +1,118 @@
+---
+title: "inclass"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "10/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set up
+```{r}
+library(palmerpenguins)
+library(ggplot2)
+data <- penguins
+head(data)
+```
+## 1
+Create a scatterplot of the body mass against the bill depth of the penguins. How
+would you describe the relationship between these two variables?
+```{r}
+ggplot(aes(bill_depth_mm, body_mass_g), data = data) + geom_point()
+```
+
+positive linear? 
+
+## 2
+Create the same scatterplot but now with different colored plots for each species. Also
+be sure to overlay separate regression lines for each species. How would you now
+describe the relationship between the variables?
+```{r}
+ggplot(aes(body_mass_g,bill_depth_mm, color=species), data = data) + 
+  geom_point()+
+  geom_smooth(method=lm, se=FALSE)+
+  labs(title="Scatterplot of Body mass against the bill depth by Species")
+```
+
+## 3 
+Create a regression with interaction between bill depth and species, i.e.
+??
+```{r}
+contrasts(data$species)
+#data$species <- relevel(data$species, ref= "Adelie")
+result<-lm(body_mass_g~bill_depth_mm*species, data=data)
+summary(result)
+```
+What should the equation be?
+
+## 4
+Carry out the relevant hypothesis test to see if the interaction terms can be dropped.
+What is the conclusion?
+```{r}
+reduced<-lm(body_mass_g~bill_depth_mm+species, data=data)
+anova(reduced,result)
+```
+The significant test states that we cannot drop the interaction terms.
+
+## 5
+Based on your answer in part 4, write out the estimated regression equations relating
+body mass and bill depth, for each species of the penguins.
+
+## 6
+Assess if the regression assumptions are met, for the model you will recommend to use
+(based on part 4). Also, be sure to carry out Levene’s test of equality of variances
+since we have a categorical predictor.
+
+```{r}
+library(tidyverse)
+yhat = result$fitted.values
+res = result$residuals
+data = data.frame(yhat, res)
+data %>%
+  ggplot(aes(yhat, res)) + geom_point() + theme_bw() + geom_hline(yintercept=0, color="red")
+```
+
+```{r}
+acf(result$residuals, main="ACF Plot of Residuals with ystar")
+```
+
+```{r}
+{
+qqnorm(result$residuals)
+qqline(result$residuals, col="red")
+}
+```
+
+Levene's test
+```{r}
+library(lawstat)
+ggplot(penguins, aes(x=species, y=body_mass_g))+ geom_boxplot()
+```
+
+
+```{r}
+levene.test(penguins$body_mass_g,penguins$species)
+```
+
+p-value is above 0.05 so we have the evidence that this assumption of variance are equal across all classes of the categorical predictor is not met. So the variance is equal across all classes of the categorical predictor.
+
+
+
+## 9
+Briefly explain if we can conduct pairwise comparisons for the difference in mean body
+mass among all pairs of species for given values bill depth, i.e.,
+```{r}
+library(multcomp)
+pairwise<-glht(reduced, linfct = mcp(species= "Tukey"))
+summary(pairwise)
+```
+
+?
+
+
+
+
+
+

@@ -1,0 +1,96 @@
+---
+title: "Inclass"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "10/5/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prework
+```{r}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Module6")
+data = read.csv("nfl.txt", sep="\t")
+head(data)
+```
+
+
+# 1) Create a scatterplot matrix and find the correlation between all pairs of variables for this data set. Answer the following questions based on the output:
+```{r}
+pairs(data, lower.panel = NULL)
+cor(data)
+```
+- (A) Which predictors appear to be linearly related to the number of wins? Which predictors do not appear to have a linear relationhsip with the number of wins?
+    - Maybe x1, x5, x7, x8 have a linear relationship.
+
+- (B) Do you notice if any of the predictors are highly correlated with one another? If so, which ones?
+    - (X1, X7), (X7, X8)
+    
+- (C) What predictors would you first consider to use in a multiplie linear regression? Briefly explain your choices.
+    - I would start with x1, x8
+    
+    
+# 2) Regardless of your answer to the previous question, fit a multiple regression model for the number of games won against the following three predictors: the team’s passing yardage, the percentage of rushing plays, and the opponents’ yards rushing. Write the estimated regression equation.
+
+```{r}
+result<-lm(y~x2+x7+x8, data=data)
+summary(result)
+```
+
+$y = 0.003598x2 + 0.193960x7 - 0.004815x8 -1.808372$
+
+# 3) Interpret the estimated coefficient for the predictor x7 in context.
+As the percent rushing increases by one, the games won increases by 0.193960
+
+# 4) A team with x2 = 2000 yards, x7 = 48 percent, and x8 = 2350 yards would like to estimate the number of games it would win. Also provide a relevant interval for this estimate with 95% confidence.
+
+```{r}
+newdata<-data.frame(x2=2000, x7=48, x8=2350)
+predict(result, newdata, level=0.95,interval="prediction")
+```
+
+# 5) Using the output for the multiple linear regression model from part 2, answer the
+following question from a client: “Is this regression model useful in predicting the
+number of wins during the 1976 season?” Be sure to write the null and alternative
+hypotheses, state the value of the test statistic, state the p-value, and state a relevant
+conclusion. What is the critical value associated with this hypothesis test? Perform
+the test at 0.05 significance level.
+
+$H_0 : \beta_1 = ... = \beta_k = 0 \\ H_A:\beta_i \neq 0$ For at least one 
+
+# 6) Report the value of the t statistic for the predictor x7. What is the relevant conclusion
+from this t statistic? Also report the critical value for this hypothesis test. Perform
+the test at 0.05 significance level.
+
+# 7) Check the regression assumptions by creating a residual plot, an ACF plot of the
+residuals, and a QQ plot of the residuals. Comment on these plots.
+
+```{r}
+
+```
+```{r}
+acf(result$residuals, main="ACF Plot of Residuals with ystar")
+```
+
+```{r}
+{
+qqnorm(result$residuals)
+qqline(result$residuals, col="red")
+}
+```
+
+# 8) Consider adding another predictor, x1, the team’s rushing yards for the season, to
+the model. Interpret the results of the t test for the coefficient of this predictor. A
+classmate says: “Since the result of the t test is insignificant, the team’s rushing yards
+for the season is not linearly related to the number of wins.” Do you agree with your
+classmate’s statement?
+
+```{r}
+result<-lm(y~x1+x2+x7+x8, data=data)
+summary(result)
+```

@@ -1,0 +1,125 @@
+---
+title: "Inclass"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "10/5/2021"
+output: pdf_document
+---
+
+```{r}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+library(faraway)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Module7")
+data <- seatpos
+head(data)
+```
+
+
+## 1) Fit the full model with all the predictors. Using the summary() function, comment on
+the results of the t tests and ANOVA F test from the output.
+```{r}
+result <- lm(hipcenter~., data=data)
+summary(result)
+```
+
+This model is good for predicting hte hipcenter however, each predictor has a very high p-value, which means it is insignicant. We need to do more testing to drop the predictors
+
+## 2)  Briefly explain why, based on your output from part 1, you suspect the model shows
+signs of multicollinearity.
+
+This model is good for predicting hte hipcenter however, each predictor has a very high p-value, which means it is insignicant. We need to do more testing to drop the predictors
+
+
+## 3) . Provide the output for all the pairwise correlations among the predictors. Comment
+briefly on the pairwise correlations
+
+```{r}
+pairs(data, lower.panel = NULL)
+cor(data)
+```
+
+Lots of correlations that high between the predictors. I.E. Weight, HtShoes, Ht, Seated .. All of the variables seem to be correlated with one noather to be frankly honest. 
+
+### 4) Check the variance inflation factors (VIFs). What do these values indicate about
+multicollinearity?
+
+```{r}
+vif(result)
+```
+
+## 5) Looking at the data, we may want to look at the correlations for the variables that
+describe length of body parts: HtShoes, Ht, Seated, Arm, Thigh, and Leg. Comment
+on the correlations of these six predictors
+
+Highly Correlated
+
+## 6) Since all the six predictors from the previous part are highly correlated, you may decide
+to just use one of the predictors and remove the other five from the model. Decide
+which predictor out of the six you want to keep, and briefly explain your choice.
+Thigh because it has a lower vif value after arm SHOULD BE HEIGHT SINCE HIGHER VIF
+```{r}
+result2 <- lm(hipcenter~Thigh, data=data)
+summary(result2)
+```
+## 7) Since all the six predictors from the previous part are highly correlated, you may decide
+to just use one of the predictors and remove the other five from the model. Decide
+which predictor out of the six you want to keep, and briefly explain your choice.
+```{r}
+
+result3 <- lm(hipcenter~Ht + Arm + Weight, data=data)
+summary(result3)
+vif(result3)
+```
+
+Should be okay
+
+## 8) Conduct a partial F test to investigate if the predictors you dropped from the full
+model were jointly insignificant. Be sure to state a relevant conclusion.
+
+```{r}
+anova(result3,result)
+```
+
+
+
+Produce a plot of residuals against fitted values for your model from part 7. Based on
+the residual plot, comment on the assumptions for the multiple regression model. Also
+produce an ACF plot and QQ plot of the residuals, and comment on the plots.
+
+```{r}
+yhat = result3$fitted.values
+res = result3$residuals
+data %>%
+  ggplot(aes(yhat, res)) + geom_point() + theme_bw() + geom_hline(yintercept=0, color="red")
+
+```
+
+```{r}
+acf(result3$residuals, main="ACF Plot of Residuals with ystar")
+
+```
+
+```{r}
+{
+qqnorm(result3$residuals)
+qqline(result3$residuals, col="red")
+}
+```
+
+Produce a plot of residuals against fitted values for your model from part 7. Based on
+the residual plot, comment on the assumptions for the multiple regression model. Also
+produce an ACF plot and QQ plot of the residuals, and comment on the plots.
+```{r}
+summary(result3)
+```
+
+```{r}
+summary(result)
+
+```
+
+
+
+
+

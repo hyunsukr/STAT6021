@@ -1,0 +1,112 @@
+---
+title: "Inclassmod3"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+```
+
+# 1
+Produce a scatterplot of the two variables. How would you describe the relationship
+between the two variables? Be sure to label the axes and give an appropriate title.
+Based on the appearance of the plot, does a simple linear regression appear reasonable
+for the data?
+
+```{r}
+penguins %>% 
+  ggplot(aes(body_mass_g, flipper_length_mm)) + 
+  geom_point() +
+  labs(title="Flipper Length vs Body Mass", x="Body Mass (g)", y="Flipper Length (mm)") + 
+  theme_bw()
+```
+
+# 2
+
+Produce a similar scatterplot, but with different colored plots for each species. How
+does this scatterplot influence your answer to the previous part?
+```{r}
+penguins %>% 
+  ggplot(aes(body_mass_g, flipper_length_mm, color=species)) + 
+  geom_point() +
+  labs(title="Flipper Length vs Body Mass", x="Body Mass (g)", y="Flipper Length (mm)") + 
+  theme_bw()
+```
+
+# 3
+Regardless of your answer to the previous part, produce a scatterplot of body mass
+and flipper length for Gentoo penguins. Based on the appearance of the plot, does a
+simple linear regression appear reasonable for the data?
+
+
+```{r}
+penguins %>% 
+  filter(species == "Gentoo") %>%
+  ggplot(aes(flipper_length_mm,body_mass_g, color=species)) + 
+  geom_point() +
+  labs(title="Flipper Length vs Body Mass", x="Body Mass (g)", y="Flipper Length (mm)") + 
+  theme_bw()
+```
+
+# 4
+What is the correlation between body mass and flipper length for Gentoo penguins.
+Interpret this correlation contextually. How reliable is this interpretation?
+
+```{r}
+cor(penguins[,c("flipper_length_mm", "body_mass_g")], use = "complete.obs")
+```
+
+# 5
+Use the lm() function to fit a linear regression for body mass and flipper length for
+Gentoo penguins. Write out the estimated linear regression equation.
+
+```{r}
+data = penguins %>%
+  filter(species == "Gentoo")
+result<-lm(body_mass_g~flipper_length_mm, data=data)
+summary(result)
+```
+$\hat{y} = -6787.281 + 54.623x$
+
+# 6
+Interpret the estimated slope contextually.
+
+# 7
+Does the estimated intercept make sense contextually?
+
+# 8
+Report the value of $R^2$ from this linear regression, and interpret its value contextually.
+0.759
+
+# 9
+What is the estimated value for the standard deviation of the error terms for this
+regression model, $\hat{\sigma}$ ? 
+
+# 9
+For a Gentoo penguin which has a flipper length of 220mm, what is its predicted body
+mass in grams?
+```{r}
+newData = data.frame(c(220))
+colnames(newData) = "flipper_length_mm"
+predict(result, newData)
+```
+
+# 10
+Produce the ANOVA table for this linear regression. Using only this table, calculate
+the value of $R^2$.
+
+```{r}
+anova(result)
+anova.tab = anova(result)
+SST<-sum(anova.tab$"Sum Sq")
+anova.tab$"Sum Sq"[1]/SST
+```
+
+
+

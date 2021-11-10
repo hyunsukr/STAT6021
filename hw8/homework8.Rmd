@@ -1,0 +1,198 @@
+---
+title: "homework8"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "10/31/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set Up
+```{r}
+library(tidyverse)
+library(MASS)
+data <- birthwt
+head(data)
+```
+
+## 1 - A 
+```{r}
+# refactor race
+temp = data$race
+temp[temp == 1] <- "white"
+temp[temp == 2] <- "black"
+temp[temp == 3] <- "other"
+data$race_factor = as.factor(temp)
+# Scatter Plot
+ggplot(aes(age,bwt, color=race_factor), data = data) + 
+  geom_point()+
+  geom_smooth(method=lm, se=FALSE)+
+  labs(title="Scatterplot of Birth Weight against the Mother's Age by Race")
+```
+The scatter plot provides some evidence that there is a interaction betwen the mother's age and race. One supporting evidence is that if there is no interaction then the slopes of all the regression lines seperated by race will all have the same slope. However, based on the graph we can see that white mothers the correlation between the bwt and age is positive while black mothers have a negative correlation. Interestingly enough even the "other" category race has a different correlation/behavior. The other race seems to have no big correlation. All three categories of races have different slopes which gives suppor that there is an interaction between the mother's age and race.
+
+## 1 - B
+```{r}
+## Setting white as reference class because 1 maps to white, 2 for black, 3 for other
+data$race_factor <- relevel(data$race_factor, ref= "white")
+contrasts(data$race_factor)
+result<-lm(bwt~age*race_factor, data=data)
+summary(result)
+```
+The full regression equation is as follows.
+$\hat{y} = 2583.54 + 21.37x + 1022.79 I_1 - 326.05I_2 - 62.54xI_1 - 26.03x I2$
+$I_1$ is for data points where the mother's race is black. The value will be 1 for black mothers while 0 otherwise. $I_2$ is for data points where the mother's age is other (not black or white). The value will be 1 for mother's whose race is neither black or white and 0 otherwise. The variable $x$ is for age.
+For the three racial categories the regression can be simplified like such.
+
+* White Mothers (Positive Correlation)
+
+$$
+\begin{aligned}
+\hat{y} &= 2583.54 + 21.37x + 1022.79 I_1 - 326.05I_2 - 62.54xI_1 - 26.03x I2 \\
+& = 2583.54 + 21.37x + 1022.79(0) - 326.05(0) - 62.54x(0) - 26.03x (0) \\
+&= 2583.54 + 21.37x
+\end{aligned}
+$$
+
+* Black Mothers (Negative Correlation)
+
+$$
+\begin{aligned}
+\hat{y} &= 2583.54 + 21.37x + 1022.79 I_1 - 326.05I_2 - 62.54xI_1 - 26.03x I2 \\
+& = 2583.54 + 21.37x + 1022.79(1) - 326.05(0) - 62.54x(1) - 26.03x (0) \\
+&= 2583.54 + 21.37x + 1022.79 - 62.54x \\
+&= 3606.33 - 41.17x
+\end{aligned}
+$$
+
+* Other race Mothers (Negative Correlation)
+
+$$
+\begin{aligned}
+\hat{y} &= 2583.54 + 21.37x + 1022.79 I_1 - 326.05I_2 - 62.54xI_1 - 26.03x I2 \\
+& = 2583.54 + 21.37x + 1022.79(0) - 326.05(1) - 62.54x(0) - 26.03x (1) \\
+&= 2583.54 + 21.37x + 326.05 - 26.03x \\
+&= 2909.59 - 4.66x
+\end{aligned}
+$$
+
+
+## 2 - A
+The average pay from highest to lowest region is West, North, and South
+
+## 2 - B
+It seems like from the table, the higher the mean public school expenditure per student the higher the mean pay.
+
+## 2 - C
+Using a Multiple Linear Regression model will be able to give us insight on how the region affects the relationship bweteen the pay and spend varaibles. We can make specific MLR equations for each region and even compare the MLR equation for each region to see how each region influences the pay given the spend. 
+
+## 3 - A
+We can conduct a partial F test with the values given. Since we are testing if the interaction terms are significant our full model will be including the interactions terms, while our reduced model will be the equation without the interactions. The following equations are the equations for investigation
+
+Full: $E(y) = \beta_0 + \beta_1x_1 + \beta_2I_2 + \beta_3 I_3 + \beta_4 x_1 \cdot I_2 + \beta_5x_1 \cdot I_3$
+Reduced Model : $E(y) = \beta_0 + \beta_1x_1 + \beta_2I_2 + \beta_3 I_3$
+
+Therefore, the null hypothsis we are testing is as follows
+
+$H_0: \beta_4 = \beta_5 = 0$
+
+And the althernate hypothesis is as follows
+$H_A: \text{At least one of the two} (\beta_4, \beta_5) \text{ is not } 0$
+
+The partial f test is as follows.
+$$
+\begin{aligned}
+F - Stat &= \frac{\frac{SS_R(F) - SS_R(R)}{r}}{\frac{SS_{res}(F)}{n-p}} \\
+F - Stat &= \frac{\frac{9720281}{2}}{\frac{232498501}{45}} \\
+F - Stat &= \frac{4860140}{5166633} \\
+F - Stat &= \frac{4860140}{5166633} \\
+F - Stat &= 0.9406784
+\end{aligned}
+$$
+The critical value can be found using a table, but will use R for the sake of simplicity.
+```{r}
+qf(0.95,2,45)
+```
+The p-value given the test statistic is
+```{R}
+1 - pf(3.204317, 2, 45)
+```
+The critical value is 3.204317, which is greater than our F-statistic found. Therefore, we fail to reject the null hypothesis. Therefore the conclusion is that we can drop the interaction terms from the model and use the simpler model.
+
+## 3 - B
+The reference class if the are of North. We can tell esaily since in the output there is AREASouth and AREAWest. Each will evaluate to 1 if the area is South and West respectivly. Therefore, the only region left that will be zero in both will be North. 
+
+## 3 - C
+The estimate of $\beta_2  = 5.294e+02 = 529.4$. This means that the annaul public school teacher salary for teachers in the southern region is $529.4 greater than the teachers in the north region given the same spending (x) variable. 
+
+## 3 - D
+The equation for Bonferroni procedure is as follows $\hat{\beta_j} \pm t_{\frac{\alpha}{2p}, n-p} se(\hat{\beta_j})$
+
+* North Region and the South Region
+
+$$
+\begin{aligned}
+\hat{\beta_j} \pm t_{\frac{\alpha}{2*g}, n-p} se(\hat{\beta_j}) \\
+529.4 \pm t_{\frac{\alpha}{2*3}, 51-4} 766.9 \\
+529.4 \pm 2.482694*766.9 \\
+529.4 \pm 2.482694*766.9 \\
+529.4 \pm 1903.978 \\
+(-1374.578, 2433.378)
+\end{aligned}
+$$
+
+* North Region and the West Region
+
+$$
+\begin{aligned}
+\hat{\beta_j} \pm t_{\frac{\alpha}{2*g}, n-p} se(\hat{\beta_j}) \\
+1674 \pm t_{\frac{\alpha}{2*3}, 51-4} 801.2 \\
+1674 \pm 2.482694*801.2 \\
+1674 \pm 2.482694*801.2 \\
+1674 \pm 1989.134 \\
+(-315.134, 3663.134)
+\end{aligned}
+$$
+
+* South and West Region
+
+$$
+\begin{aligned}
+(\hat{\beta_j} - \hat{\beta_k}) \pm t_{\frac{\alpha}{2*g}, n-p} se(\hat{\beta_j} - \hat{\beta_k}) \\
+(529.4 - 1674) \pm 2.482694 * \sqrt{Var\{\hat{\beta_j} - \hat{\beta_k}\}} \\
+(529.4 - 1674) \pm 2.482694 * \sqrt{Var\{\hat{\beta_j}\} + Var\{\hat{\beta}\} - 2Cov\{\hat{\beta_j},\hat{\beta_k}\}} \\
+(529.4 - 1674) \pm 2.482694 * \sqrt{588126.71689 +  641873.8 - 2*244238.02959} \\
+(529.4 - 1674) \pm 2.482694 * \sqrt{741524.5} \\
+(529.4 - 1674) \pm 2.482694 * 861.1182 \\
+(-1144.6) \pm 2137.893 \\
+(-3282.493, 993.293)
+\end{aligned}
+$$
+
+## 3 - E
+All the confidence intervals constructed contain the value of 0, which means that the geographic region has no significant effect on the average annual public school teacher salary when the spend is controlled.
+
+### 4
+Submitted the Group Evaluation!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

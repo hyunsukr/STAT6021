@@ -1,0 +1,178 @@
+---
+title: "Homework9"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/7/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set Up
+```{r}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+library(leaps)
+data <- birthwt
+head(data)
+```
+## 1-A
+The following variables are categorical.
+
+* low (indicator of birth weight less than 2.5 kg.)
+* race (mother's race (1 = white, 2 = black, 3 = other))
+* smoke (smoking status during pregnancy.)
+* ht (history of hypertension.)
+* ui (presence of uterine irritability.)
+
+Making sure R forces the columns as categorical variables.
+```{r}
+data$low <- factor(data$low)
+data$race_tri_cat <- factor(data$race)
+levels(data$race_tri_cat) <- c("White", "Black", "Other")
+data$smoke <- factor(data$smoke)
+data$ht <- factor(data$ht)
+data$ui <- factor(data$ui)
+head(data)
+```
+
+## 1-B
+I agree. the low variable is an indicator of brithweight less than 2.5kg. The response variable we are trying to measure is the birth weight in grams. The low variable is directly related to the response so we should not use it for analysis. 
+
+## 1-C
+```{r}
+allreg <- regsubsets(bwt~age+lwt+race_tri_cat+smoke+ptl+ht+ui+ftv, data=data, nbest=8)
+summary(allreg)
+```
+### 1-C-I
+The best model for Adjusted $R^2$.
+```{r}
+max(summary(allreg)$adjr2)
+which.max(summary(allreg)$adjr2)
+coef(allreg, which.max(summary(allreg)$adjr2))
+```
+The predictors for the best adjusted $R^2$ had predcitors of
+
+* lwt
+* race_black
+* race_other
+* smoke
+* ht
+* ui
+
+### 1-C-II
+The best model for Mallow's $C_p$
+
+```{r}
+min(summary(allreg)$cp)
+which.min(summary(allreg)$cp)
+coef(allreg, which.min(summary(allreg)$cp))
+```
+The predictors for Mallow's $C_p$ had predcitors of
+
+* lwt
+* race_black
+* race_other
+* smoke
+* ht
+* ui
+
+### 1-C-III
+The best model for BIC
+
+```{r}
+min(summary(allreg)$bic)
+which.min(summary(allreg)$bic)
+coef(allreg, which.min(summary(allreg)$bic))
+```
+The predictors for Mallow's BIC had predcitors of
+
+* lwt
+* race_black
+* race_other
+* smoke
+* ht
+* ui
+
+All three adjusted $R^2$, Mallow's $C_p$, and BIC led to the same model.
+
+## 1-D
+Starting with the first-order model with all the predictors, backward selection was done to find the best model according to the AIC.
+```{r}
+##intercept only model
+regnull <- lm(bwt~1, data=data)
+##model with all predictors
+regfull <- lm(bwt~age+lwt+race_tri_cat+smoke+ptl+ht+ui+ftv, data=data)
+step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
+```
+
+The selected Regression is stated as follows.
+
+$bwt = 837.264 + 4.242lwt - 475.058I_1 - 348.150I_2 - 356.321smoke - 585.193ht - 525.524ui$
+
+In the above equation, $I_1$ and $I_2$ represent the indicators for if the subject was of the race black or other respectivly. 
+
+## 2-A
+The model selected based on forward selection utilized the following variables as predictors.
+
+* discount
+* promo
+* price
+
+## 2-B
+The algorithm for forward selection can be broken down into many steps.
+At the very beginning (the base case), the model starts with 0 predictors, which means none of the variables are used in the prediction model. From this base case the algorithm kicks off.
+
+Step 1: Select one predictor to utilize in the model. In this case it is adding one variable to the base case.
+
+Step 2: Calculate the AIC for the model fit. If the AIC is smaller than the current AIC and the smallest AIC, the predictor is added.
+
+Step 3: Continue this process (Step 1 and Step 2) until no smaller AIC is found or number of predictors run out.
+
+## 2-C
+Before defaulting to use the model outputted it is critical to check the assumptions of linear regerssion with tools such as Residual Plot, ACF Plot, and QQ plot. Also, a good sanity check is to see if the predictors selected actually makes sense. Does the study being conducted and the equation align well? Is this equation useful? These are the points / advice I would give to the client.
+
+## 3
+An advantage of adjusted $R^2$ over $R^2$ is that adjusted $R^2$ is being resistent to adding not useful parameters in the model. Adding a parameter to a model, even though that paramter is useless, will increase the $R^2$ value. If the added parameter is useless than the adjusted $R^2$ will catch this nature and decrease which would lead to a simplistic model. Adjust $R^2$ is good to find the regression with good fit and simplicity.
+
+One advantage of $R^2$ is the interpretation being easy to understand for a given model. $R^2$ measures the proportion of variance caused by the model. The adjusted $R^2$ cannot output this information.
+
+
+## 4
+The function our group wrote to compute the PRESS Satistic form the guided question set.
+```{r}
+press.computation <- function(model) {
+  linear.model <- model
+  influence <- lm.influence(linear.model)
+  denom  = sapply(influence$hat, function(x) 1 - x)
+  division = influence$wt.res / denom
+  squared = division^2
+  stat = sum(squared)
+  return(stat)
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

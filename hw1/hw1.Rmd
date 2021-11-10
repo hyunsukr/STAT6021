@@ -1,0 +1,183 @@
+---
+title: "HW1 - Hr2ee"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Prework
+Read the data file into R and store the dataset into the object Covid.
+
+```{r, echo=TRUE}
+library(dplyr)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/hw1")
+Covid = read.csv("UScovid.csv", header = TRUE)
+head(Covid)
+```
+
+# Q1
+### A
+We are interested in the data at the most recent date, June 3 2021. Create a data frame called latest that:
+
+* has only rows pertaining to data from June 3 2021,
+* removes rows pertaining to counties that are “Unknown”,
+* removes the column date and fips,
+* is ordered by county and then state alphabetically
+
+Use the head() function to display the first 6 rows of the data frame latest
+
+* has only rows pertaining to data from June 3, 2021
+```{r}
+latest = Covid
+latest = latest[latest$date == '2021-06-03',]
+```
+
+* removes rows pertaining to counties that are “Unknown”,
+```{r}
+latest = latest[latest$county != "Unknown",]
+```
+
+
+* removes the column date and fips,
+```{r}
+latest$date = NULL
+latest$fips = NULL
+```
+
+* is ordered by county and then state alphabetically
+```{r, echo=TRUE}
+latest = latest[order(latest$county, latest$state),]
+head(latest)
+```
+
+
+#### B
+Calculate the death rate (call it death.rate) for each county. Report the death rate as a percent and round to two decimal places. Add death.rate as a new column to the data frame latest. Display the first 6 rows of the data frame latest.
+
+
+```{r}
+latest$death.rate = round((latest$deaths / latest$cases) * 100,2)
+head(latest)
+```
+
+#### C
+Display the counties with the 10 largest number of cases. Be sure to also display the number of deaths and death rates in these counties, as well as the state the counties belong to.
+
+```{r}
+head(latest[order(-latest$cases), c("county", "state", "deaths", "death.rate", "cases")],10)
+```
+
+#### D
+Display the counties with the 10 largest number of deaths. Be sure to also display the number of cases and death rates in these counties, as well as the state the counties belong to.
+
+```{r}
+head(latest[order(-latest$deaths), c("county", "state", "deaths", "death.rate", "cases")],10)
+```
+
+#### E
+Display the counties with the 10 highest death rates. Be sure to also display the number of cases and deaths in these counties, as well as the state the counties belong to. Is there sometime you notice about these counties?
+
+```{r}
+head(latest[order(-latest$death.rate), c("county", "state", "deaths", "death.rate", "cases")],10)
+```
+An intersting finding for these counties was that the number of cases is not that high when compared to the other counties. Take for Instance the cases for L.A (1245127) compared to the highest death rate Grant, NE (41). Death Rate is by porportion and not the count. There can be a very high count of covid cases in an area that may not neccesarily mean that it has a high death rate. There could be some other factors that are contributing to deathrate. A possible hypothesis could be the vacine rate. It seems like all the counties shown above are part of "red" states, which in the news there have been lots of talks about low vaccination rates. This could be a contributing factor that could be later tested, does vacination rate have a big role in death rate.
+
+#### F
+Display the counties with the 10 highest death rates among counties with at least 100,000 cases. Be sure to also display the number of cases and deaths in these counties, as well as the state the counties belong to.
+```{r}
+atleast = latest[latest$cases >= 100000, ]
+head(atleast[order(-atleast$death.rate),  c("county", "state", "deaths", "death.rate", "cases")],10)
+```
+
+#### G
+Display the number of cases, deaths, death rate for the following counties:
+
+* Albemarle, Virginia
+```{r}
+latest[(latest$state == "Virginia") & (latest$county == "Albemarle"),]
+```
+* Charlottesville City, Virginia
+```{r}
+latest[(latest$state == "Virginia") & (latest$county == "Charlottesville city"),]
+```
+
+
+# Q2
+For this question, we focus on data at the state level. Note that the dataset has data on the 50 states ,plus DC, Puerto Rico, Guam, Northern Mariana Islands, and the Virgin Islands.
+
+#### A
+We are interested in the data at the most recent date, June 3 2021. Create a data
+frame called state.level that:
+
+* has 55 rows: 1 for each state, DC, and territory
+* has 3 columns: name of the state, number of cases, number of deaths
+* is ordered alphabetically by name of the state 
+
+Display the first 6 rows of the data frame state.level.
+
+1st Step is to filter the data for dates after 2020-06-02
+2nd Step is to drop the counties, date, fips since they are irrelavent
+3rd Step is to group by and add the data since the columns are all numeric
+4th Step is to order alphabetically by the name of the state
+```{r}
+# Step 1
+state.level = Covid
+state.level = state.level[state.level$date == '2021-06-03',]
+
+# Step 2
+state.level$county = NULL
+state.level$fips = NULL
+state.level$date = NULL
+
+# Step 3
+## Removed NA due to quality issues.
+state.level = state.level %>% group_by(state) %>% summarise(across(everything(), sum,  na.rm=TRUE))
+state.level
+
+# Step 4
+state.level = state.level[order(state.level$state),]
+
+# Show top 6
+head(state.level)
+```
+#### B
+Calculate the death rate (call it state.rate) for each state. Report the death rate as a percent and round to two decimal places. Add state.rate as a new column to the data frame state.level. Display the first 6 rows of the data frame state.level.
+
+```{r}
+state.level$state.rate = round((state.level$deaths / state.level$cases) * 100,2)
+head(state.level)
+```
+
+#### C
+What is the death rate in Virginia?
+```{r}
+state.level[state.level$state == "Virginia", c("state","state.rate")]
+```
+
+#### D
+What is the death rate in Puerto Rico?
+```{r}
+state.level[state.level$state == "Puerto Rico", c("state","state.rate")]
+```
+The above output when investigated throroughly had some NA attributes for Deaths while the cases were >0. This is some odd data collection and should be brought back to the data collection team if possible, but the above calcualtions were done with removing NA deaths. 
+
+#### E
+Which states have the 10 highest death rates?
+```{r}
+head(state.level[order(-state.level$state.rate),],10)
+```
+
+#### F
+Which states have the 10 lowest death rates. 
+```{r}
+head(state.level[order(state.level$state.rate),],10)
+```
+
+#### G
+Export this dataset as a .csv file named stateCovid.csv. We will be using this
+file for the next homework.
+```{r}
+write.csv(state.level, file="stateCovid.csv", row.names = FALSE)
+```

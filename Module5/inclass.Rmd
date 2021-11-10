@@ -1,0 +1,128 @@
+---
+title: "In class"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "9/28/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(MASS)
+```
+
+# 1
+Create a scatter plot of brain weight against body weight of land mammals. Comment
+on the appearance of the plot. Do any assumptions for simple linear regression appear
+to be violated? If so, which ones?
+```{r}
+mammals %>%
+  ggplot(aes(body, brain)) + geom_point() + theme_bw()
+```
+
+## Fit a simple linear regression to the data, and create the corresponding residual plot.
+Do any assumptions for simple linear regression appear to be violated? If so, which
+ones?
+```{r}
+result <- lm(brain~body, data=mammals)
+yhat = result$fitted.values
+res = result$residuals
+data = data.frame(mammals, yhat, res)
+data %>%
+  ggplot(aes(yhat, res)) + geom_point() + theme_bw() + geom_hline(yintercept=0, color="red")
+```
+
+# 3 
+Based on your answers to parts 1 and 2, do we need to transform at least one of the
+variables? Briefly explain.
+
+# 4
+For the simple linear regression in part 2, create a Box Cox plot. What transformation,
+if any, would you apply to the response variable? Briefly explain.
+y = y^0.1
+```{r}
+result <- lm(brain~body, data=mammals)
+boxcox(result)
+boxcox(result, lambda = seq(-0.05, 0.2, 1/100))
+```
+# 5
+Apply the transformation you specified in part 4, and let y∗ denote the transformed
+response variable. Create a scatterplot of y∗ against x. Comment on the appearance
+of the plot. Do any assumptions for simple linear regression appear to be violated? If
+so, which ones?
+
+```{r}
+temp <- mammals
+temp$brain = temp$brain^0.075
+temp %>%
+  ggplot(aes(body, brain)) + geom_point() + theme_bw()
+```
+
+# 6
+Fit a simple linear regression to y∗ against x, and create the corresponding residual
+plot. Do any assumptions for simple linear regression appear to be violated? If so,
+which ones?
+
+```{r}
+result <- lm(brain~body, data=temp)
+yhat = result$fitted.values
+res = result$residuals
+data = data.frame(mammals, yhat, res)
+data %>%
+  ggplot(aes(yhat, res)) + geom_point() + theme_bw() + geom_hline(yintercept=0, color="red")
+```
+
+# 7
+Do we need to transform the x variable? If yes, what transformation(s) would you try?
+Briefly explain. Create a scatterplot of y∗ against x∗. Do any assumptions for simple
+linear regression appear to be violated? If so, which ones?
+
+```{r}
+temp <- mammals
+temp$brain = temp$brain^0.075
+temp %>%
+  ggplot(aes(log(body), brain)) + geom_point() + theme_bw()
+```
+
+# 8
+Fit a simple linear regression to y∗ against x∗, and create the corresponding residual
+plot. Do any assumptions for simple linear regression appear to be violated? If so,
+which ones? If the assumptions are not met, repeat with a different transformation on
+the predictor until you are satisfied.
+
+```{r}
+result <- lm(brain~log(body), data=temp)
+yhat = result$fitted.values
+res = result$residuals
+data = data.frame(mammals, yhat, res)
+data %>%
+  ggplot(aes(yhat, res)) + geom_point() + theme_bw() + geom_hline(yintercept=0, color="red")
+
+```
+
+# 9
+Create an ACF plot of the residuals. Comment if assumptions are met for linear
+regression.
+```{r}
+acf(result$residuals, main="ACF Plot of Residuals with ystar")
+```
+
+
+# 10
+Create a QQ plot of the residuals. Comment if assumptions are met for linear regression.
+```{r}
+qqnorm(result$residuals)
+```
+
+
+# 11
+Write out the regression equation, and if possible, interpret the slope of the regression.
+```{r}
+result
+```
+
+$y^{0.075} = 1.00008012 + 0.002822(log(x))$

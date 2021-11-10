@@ -1,0 +1,55 @@
+---
+title: "inclass"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/9/2021"
+output: pdf_document
+---
+
+
+```{r}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+library(leaps)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Module10")
+data = read.csv("nfl.txt", sep="\t")
+head(data)
+```
+
+```{r}
+result <- lm(y~x2+x7+x8, data=data)
+```
+
+## 1
+```{r}
+## Without
+regress_x7_x8 <- lm(y~x7+x8, data=data)
+
+## Fit regression function of variable in questions
+regress_x2 <- lm(x2~x7+x8, data = data)
+
+data.frame(x=regress_x7_x8$residuals, y=regress_x2$residuals) %>%
+  ggplot(aes(x,y)) + 
+  geom_hline(yintercept=0, color="red") +
+  theme_bw() +
+  geom_point()
+
+```
+A) This shows that a linear term for the predictor is appropriate.
+B)
+```{r}
+regress_x2$coefficients
+```
+
+## 2 
+
+## 3
+```{r}
+##leverages
+lev<-lm.influence(result)$hat
+##identify high leverage points
+lev[lev>2*p/n]
+```
+## 4
+
+

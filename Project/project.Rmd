@@ -1,0 +1,72 @@
+---
+title: "Project"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "10/6/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Prework
+
+```{r cars}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Project")
+data = read.csv("diamonds4.csv")
+head(data)
+```
+
+Visualizations
+```{r}
+data %>%
+  ggplot(aes(carat, price)) +
+  geom_point() + 
+  labs(x="Carat Size", y="Price", title="Price vs Carat Size") +
+  theme_bw()
+```
+
+
+```{r}
+newData = data %>%
+  group_by(cut) %>%
+  summarize(Counts=n()) %>%
+  mutate(prop=Counts/nrow(data))
+
+ggplot(newData, aes(x=cut, y=prop)) +
+  geom_bar(stat="identity",fill="blue", color="orange") +
+  labs(x="Cut Category", y="Proportions of Cuts", title="Dist of Cut") +
+  theme_bw()
+```
+
+```{r}
+data$cut <- factor(data$cut,
+    levels = c('Good','Very Good', 'Ideal', 'Astor Ideal'),ordered = TRUE)
+ggplot(data, aes(x=cut, y=price, color=cut)) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,30000), breaks=seq(0,30000,10000)) +
+  theme_bw()
+```
+
+```{r}
+data$clarity
+data$clarity <- factor(data$clarity,
+    levels = c('FL','IF', 'VVS1', 'VVS2', 'VS1', 'VS2', 'SI2','S'),ordered = TRUE)
+ggplot(data, aes(x=clarity, y=price, color=clarity)) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,30000), breaks=seq(0,30000,10000)) +
+  theme_bw()
+```
+
+
+```{r}
+ggplot(data, aes(x=color, y=price, color=color)) +
+  geom_boxplot() + 
+  scale_y_continuous(limits=c(0,30000), breaks=seq(0,30000,10000)) +
+  theme_bw()
+```
+
+

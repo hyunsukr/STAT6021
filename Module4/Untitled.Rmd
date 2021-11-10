@@ -1,0 +1,19 @@
+---
+title: "inclass"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "9/21/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+Produce a plot of body mass against flipper length for Gentoo penguins. Write the
+estimated linear regression equation.
+
+```{r}
+library(palmerpenguins)
+library(tidyverse)
+```

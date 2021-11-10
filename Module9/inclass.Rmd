@@ -1,0 +1,148 @@
+---
+title: "inclass9"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(MASS)
+library(tidyverse)
+library(leaps)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Module9")
+data = read.csv("nfl.txt", sep="\t")
+head(data)
+```
+
+
+## Q1
+```{r}
+allreg <- regsubsets(y ~., data=data, nbest=2)
+summary(allreg)
+```
+
+## Q2
+Adjusted R2
+```{r}
+which.max(summary(allreg)$adjr2)
+coef(allreg, which.max(summary(allreg)$adjr2))
+```
+
+
+Mallow's Cp
+```{r}
+which.min(summary(allreg)$cp)
+coef(allreg, which.min(summary(allreg)$cp))
+```
+
+
+BIC
+```{r}
+which.min(summary(allreg)$bic)
+coef(allreg, which.min(summary(allreg)$bic))
+```
+
+## Q3 Forward Selection
+```{r}
+##intercept only model
+regnull <- lm(y~1, data=data)
+##model with all predictors
+regfull <- lm(y~., data=data)
+## Foward Selection
+step(regnull, scope=list(lower=regnull, upper=regfull), direction="forward")
+```
+
+## Q4
+Backward Selection
+```{r}
+step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
+```
+
+## Q5 Stepwise
+```{r}
+step(regfull, scope=list(lower=regnull, upper=regfull), direction="both")
+```
+
+## Q6
+Create the press function
+
+```{r}
+press.computation <- function(model) {
+  linear.model <- model
+  influence <- lm.influence(linear.model)
+  denom  = sapply(influence$hat, function(x) 1 - x)
+  division = influence$wt.res / denom
+  squared = division^2
+  stat = sum(squared)
+  return(stat)
+}
+```
+## Q7
+
+```{r}
+model <- lm(y ~x2+x7+x8, data=data)
+influence <- lm.influence(model)
+press.computation(model)
+summary(model)$r.squared
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,207 @@
+---
+title: 'Stat 6021: Homework Set 3'
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+(R required) We will use the dataset “Copier.txt” for this question. The Tri-City Office Equipment Corporation sells an imported copier on a franchise basis and performs preventive maintenance and repair service on this copier. The data have been collected from 45 recent calls on users to perform routine preventive maintenance service; for each call, Serviced is the number of copiers serviced and Minutes is the total number of minutes spent by the service person.
+
+### Prework
+```{r}
+library(tidyverse)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/hw3")
+data <- read.csv("copier.txt", sep="\t")
+head(data)
+```
+
+### A
+What is the response variable in this analysis? What is predictor in this analysis?
+
+The response variable for this analysis will be the Serviced attribute. The predictor will be the minutes attribute. The analysis is based on the idea of how many people can the service person service given some amount of time.
+
+### B
+Produce a scatterplot of the two variables. How would you describe the relationship between the number of copiers serviced and the time spent by the service person?
+
+```{r}
+data %>%
+  ggplot(aes(Minutes, Serviced)) + 
+  geom_point() + 
+  labs(
+    title="Serviced vs Minutes", 
+    x="Minutes", 
+    y="Number of Serviced"
+  ) +
+  theme_bw()
+```
+
+Based on the visiual representation above, it casn be observed that the relationship is linear and has a strong posivite relationship. We know that it is a positive linear relationship since as the minutes increase the numebr of serviced users also increased. We can also observe that the strength of the relationship is strong because the points are very close to one another as minutes and serviced increased if there was a linear plot shown.
+
+### C
+Use the lm() function to fit a linear regression for the two variables. Where are the values of $\hat{\beta_{1}}$, $\hat{\beta_{0}}$, $R^2$, and $\hat{\sigma}^2$ for this linear regression? 
+
+```{r}
+linear.model <- lm(Minutes~Serviced, data=data)
+summary(linear.model)
+```
+From the above we can find the following values.
+$\hat{\beta_{1}} = 15.0352$
+$\hat{\beta_{0}} = -0.5802$
+$R^2 =  0.9575$
+$\hat{\sigma}^2 = 8.914^2$
+
+### D
+Interpret the values of $\hat{\beta_{1}}$ and $\hat{\beta_{0}}$ contextually. Does the value of $\hat{\beta_{0}}$ make sense in this context?
+
+The value of  $\hat{\beta_{1}}$ means that for every increase of minutes of the call that the service person spends there is an increase of 15.0352 completed services. 
+
+The value of $\hat{\beta_{0}}$ means that if a service person spent zero there will be -0.5802 services completed, which in the real world doesn't make much sense because you cannot service less than 0 calls. 
+
+### E
+Use the anova() function to produce the ANOVA table for this linear regression. What is the value of the ANOVA F statistic? What null and alternative hypotheses are being tested here? What is a relevant conclusion based on this ANOVA $F$ statistic?
+
+```{r}
+anova.tab<-anova(linear.model)
+anova.tab
+```
+From the table above we can see that the $F$ statistic is 968.66. The null hypothesis is $H_0: \beta_1 = 0$ and the alternative hypothesis is $H_A: \beta_1 \neq 0$ Based on the p-value also shown above we can assume that this sample slope did not occur by chance and we reject the null hypothesis.
+
+
+## 2
+(Do not use R in this question) Suppose that for n = 6 students, we want to predict their scores on the second quiz using scores from the first quiz. The estimated regression line is
+$\hat{y} = 20 + 0.8x$
+
+### A
+For each individual observation, calculate its predicted score on the second quiz $\hat{y_i}$ and the residual $e_i$. You may show your results in the table below.
+
+\begin{center}
+\begin{tabular}{ | c | c | c | c | c | c | c | }
+ \hline
+ $x_i$ & 70 & 75 & 80 & 80 & 85 & 90  \\ \hline
+ $y_i$ & 75 & 82 & 80 & 86 & 90 & 91 \\ \hline
+ $\hat{y_i}$ & 76 & 80 & 84 & 84 & 88 & 92 \\ \hline
+ $e_i$ & -1 & 2 & -4 & 2 & 2 & -1 \\ \hline
+\end{tabular}
+\end{center}
+
+### B
+Complete the ANOVA table for this dataset below. Note: Cells with *** in them are typically left blank.
+\begin{center}
+\begin{tabular}{ | c | c | c | c | c | c | }
+ \hline
+            & DF & SS & MS & F-Stat & p-value  \\ \hline
+ Regression &  1  &  $\sum^n_{i=1} (\hat{y}_i - \bar{y})^2 = (76 - 84)^2 + ... + (92 - 84)^2 = 160$  &  $160$   &  $\frac{160}{7.5}=21.33333$      & 0.0099 \\ \hline
+ Residual   &  4  &  $\sum^n_{i=1} (y_i - \hat{y}_i)^2 = (75 - 76)^2 + ... + (91 - 92)^2 = 30$  &  $\frac{30}{4}= 7.5 $  &    NA  & NA \\ \hline
+ Total      &  5  &  $\sum^n_{i=1} (y_i - \bar{y})^2 = (75-84)^2 + ... + (91-84)^2 = 190$  &  NA &    NA  & NA \\ \hline
+\end{tabular}
+\end{center}
+
+### C
+Calculate the sample estimate of the variance $\sigma^2$ for the regression model.
+
+The definition is as follows. 
+$$
+\begin{aligned}
+\sigma^2 &= \frac{\sum^n_{i=1} (y_i - \bar{y})^2}{n-2} \\
+&= \frac{(75 - 76)^2 + ... + (91 - 92)^2}{4} \\
+&= \frac{30}{4} \\
+&= 7.5\\
+\end{aligned}
+$$
+
+
+### D
+What is the value of $R^2$ here?
+$$
+\begin{aligned}
+R^2 &= 1 - \frac{SSE}{SST}\\
+& = 1 - \frac{30}{190} \\
+& = 1 - 0.1578947 \\ 
+R^2 & = 0.8421053
+\end{aligned}
+$$
+
+### E 
+Carry out the ANOVA F test. What is an appropriate conclusion? 
+
+The null hypothesis is $H_0: \beta_1 = 0$ and the alternative hypothesis is $H_A: \beta_1 \neq 0$. For this case our F-Statistic was 21.33333. With this F-Statisics the p-value showed to be 0.0099, which is lower than an alpha of 0.05 and even lower than 0.01. This means that this slope of the regression line did not occur by chance and thus we can reject the null hypothesis. 
+
+## 3
+Using the following equations show the following equations hold.
+
+* Given
+
+$$
+\begin{aligned}
+\hat{\beta_1} &= \frac{\sum^n_{i=1} (x_i - \bar{x})(y_i - \bar{y})}{\sum^n_{i=1} (x_i -\bar{x})^2} \\
+\hat{\beta_0} &= \bar{y} - \hat{\beta_1}\bar{x} \\
+SS_{res} &=  \sum^n_{i=1} (y_i - \hat{y_i})^2 \\
+\hat{y_i} &= \hat{\beta_0} + \hat{\beta_1}x_i \\
+e_i &= y_i - \hat{y}_i
+\end{aligned}
+$$
+
+* Show (Equation 6)
+
+$$
+\begin{aligned}
+\sum^n_{i=1} e_i &= 0 \\
+\sum^n_{i=1} y_i - \hat{y}_i &= 0 \\
+\sum^n_{i=1} y_i - \hat{\beta_0} + \hat{\beta_1}x_i &= 0 \\
+\sum^n_{i=1} y_i - \bar{y} - \hat{\beta_1}\bar{x} + \hat{\beta_1}x_i &= 0 \\
+\sum^n_{i=1} y_i - \bar{y} + \sum^n_{i=1} -\hat{\beta_1}\bar{x} + \hat{\beta_1}x_i &= 0 \\
+0  + \sum^n_{i=1} -\hat{\beta_1}\bar{x} + \hat{\beta_1}x_i &= 0 \\
+\sum^n_{i=1} -\hat{\beta_1}\bar{x} + \hat{\beta_1}x_i &= 0 \\
+\hat{\beta_1} \sum^n_{i=1} -\bar{x} + x_i &= 0 \\
+\hat{\beta_1} * 0 &= 0 \\
+0 &= 0
+\end{aligned}
+$$
+The above shows that the sum of residuals is equal to 0
+
+* Shown (Equation 7)
+
+$$
+\begin{aligned}
+\sum^n_{i=1} y_i &= \sum^n_{i=1} \hat{y}_i \\
+\sum^n_{i=1} e_i + \hat{y}_i &= \sum^n_{i=1} \hat{y}_i \\
+\sum^n_{i=1} e_i + \sum^n_{i=1} \hat{y}_i &= \sum^n_{i=1} \hat{y}_i \\
+0 + \sum^n_{i=1} \hat{y}_i &= \sum^n_{i=1} \hat{y}_i \\
+0 &= 0
+\end{aligned}
+$$
+The above states that the sum of observed values equals to the sum of the predicted values by the regression equation
+* Show (equation 8)
+
+$$
+\begin{aligned}
+\sum^{n}_{i=1} x_i e_i &= 0 \\
+\sum^{n}_{i=1} x_i  * ( y_i - \hat{y}_i ) &= 0\\
+\sum^{n}_{i=1} x_i  * ( y_i - \hat{\beta_0} + \hat{\beta_1}x_i ) &= 0 \ (\text{By taking partial derivative of } SS_{res} \text{ shown below})\\
+\ \\
+SS_{res} &= \sum^n_{i=1} (y_i - \hat{y}_i)^2 \\
+&= \sum^n_{i=1} (y_i -  \hat{\beta_0} + \hat{\beta_1}x_i)^2 \\
+\frac{\partial \ SS}{\partial \hat{\beta}_0} &= -2\sum^n_{i=1} (y_i -  \hat{\beta_0} + \hat{\beta_1}x_i)^2 \\
+\frac{\partial \ SS}{\partial \hat{\beta}_1} &= -2x_i\sum^n_{i=1} (y_i -  \hat{\beta_0} + \hat{\beta_1}x_i)^2 \\
+\end{aligned}
+$$
+The above shows that the sum of the residuals weighted by $x_i$ is always 0.
+
+* Show (equation 8)
+
+$$
+\begin{aligned}
+\sum^n_{i=1} \hat{y}_i e_i &= 0 \\
+\sum^n_{i=1}(\hat{\beta_0} + \hat{\beta_1}x_i) e_i &= 0 \\
+\sum^n_{i=1}\hat{\beta_0} e_i  + \hat{\beta_1}x_i e_i &= 0 \\
+\hat{\beta_0} \sum^n_{i=1} e_i  + \hat{\beta_1}\sum^n_{i=1}x_i e_i &= 0 \\
+0 + 0 &= 0
+\end{aligned}
+$$
+The above shows that the residuals weighted by the corresponding fitted value is equal to zero.
+
+
