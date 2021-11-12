@@ -1,0 +1,28 @@
+---
+title: "Project"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/11/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## Data Processing
+library(tidyverse)
+library(dplyr)
+setwd("/Users/maxryoo/Documents/MSDS/STAT6021/Project2")
+data <- read.csv("data/insurance.csv")
+head(data)
+```
+
+```{r}
+data$significant.charge = as.numeric(data$charges > mean(data$charges))
+head(data)
+```
+
+## Introduction of the dataset.
+
+
