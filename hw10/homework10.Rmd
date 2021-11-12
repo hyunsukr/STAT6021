@@ -127,7 +127,9 @@ D_i &= \frac{r_i^2}{p} \frac{h_{ii}}{1-h_{ii}} \\
 &= 1.878418
 \end{aligned}
 $$
+
 ## 3
+
 $$
 \begin{aligned}
 D_i &= \frac{\left(\hat{\beta} - \hat{\beta}_{(i)}\right)' (X'X) \left(\hat{\beta} - \hat{\beta}_{(i)}\right)}{pMSres} \\
