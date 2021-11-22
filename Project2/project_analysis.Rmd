@@ -19,10 +19,42 @@ head(data)
 ```
 
 ```{r}
-data$significant.charge = as.numeric(data$charges > mean(data$charges))
+data$significant.charge = as.factor(data$charges > mean(data$charges))
 head(data)
 ```
+```{r}
+ggplot(aes(x=bmi, y=charges, color=smoker), data=data) + 
+  labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
+  theme_bw() +
+  geom_point()
+```
 
-## Introduction of the dataset.
+```{r}
+ggplot(aes(x=age,y=charges, color=smoker, size=bmi), data=data) + 
+  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+  theme_bw() +
+  geom_point(alpha=0.5)
+```
+
+```{r}
+ggplot(aes(x=age,y=bmi, color=significant.charge), data=data) + 
+  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+  theme_bw() +
+  geom_point(alpha=0.5)
+
+ggplot(data, aes(x=region, y=age, fill=as.factor(significant.charge)))+
+  geom_boxplot() +
+  theme_bw() +
+  labs(x="region", y="ages", title="Dist of bmi by region and smoker status")
+
+ggplot(data, aes(x=smoker, y=bmi, fill=as.factor(significant.charge)))+
+  geom_boxplot() +
+  theme_bw() +
+  labs(x="Region", y="bmi", title="Distribution of bmi by region and smoker status") +  scale_y_continuous(limits=c(10,60), breaks=seq(10,60,5)) 
+
+```
+
+
+
 
 
