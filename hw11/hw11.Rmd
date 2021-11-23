@@ -1,0 +1,221 @@
+---
+title: "Hw11"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/22/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Set up 
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+library(gridExtra)
+Data<-penguins
+##remove penguins with gender missing
+Data<-Data[complete.cases(Data[ , 7]),-c(2,8)]
+##80-20 split
+set.seed(1)
+sample<-sample.int(nrow(Data), floor(.80*nrow(Data)), replace = F)
+train<-Data[sample, ]
+test<-Data[-sample, ]
+head(train)
+```
+
+
+## Q1 - A
+```{r}
+boxplot_pen <- function(data, x, y) {
+  return(ggplot(data, aes_string(x=x, y=y)) +
+    geom_boxplot() + 
+    labs(x=x, y=y, title=paste(y, "by", x)))
+}
+density_pen <- function(data, class, field) {
+  return(ggplot(data, aes_string(x=field, color=class)) + 
+    geom_density() + 
+    labs(title=paste("Density Plot of", field, "by", "class")))
+}
+bp1 <- boxplot_pen(train, "sex", "bill_length_mm")
+dp1 <- density_pen(train, "sex", "bill_length_mm")
+bp2 <- boxplot_pen(train, "sex", "bill_depth_mm")
+dp2 <- density_pen(train, "sex", "bill_depth_mm")
+bp3 <- boxplot_pen(train, "sex", "flipper_length_mm")
+dp3 <- density_pen(train, "sex", "flipper_length_mm")
+bp4 <- boxplot_pen(train, "sex", "body_mass_g")
+dp4 <- density_pen(train, "sex", "body_mass_g")
+grid.arrange(bp1,dp1,bp2,dp2,bp3,dp3,bp4,dp4, ncol = 2, nrow = 4)
+```
+
+When looking at the box plots for all body measurements the male gender had higher values and medians. Since all body measurements are of different mesaurements and scales, it is hard to distinguished which had the most significant difference, we can observe that for all four body measurments (bill_length_mm, bill_depth_mm, flipper_length_mm, body_mass_g) were higher for males. 
+
+From the density plots we can see that the distribution of all measurments are slightly shifted. All the density plots show a similar shape for females and males, but males' values are shifted/transformed to the right a little, which indiciates that the males had a higher measurments for all the body measurments. 
+
+## Q1 - B
+
+```{r}
+result<-glm(sex ~ ., family="binomial", data=train)
+summary(result)
+```
+
+From the Z values given and p-value, we can see that the predictor flipper_length_mm is not significant. To be exact the p-value of 0.17450 is above the threshold for significance. 
+
+## Q1 - C
+Refitting the logisitc regression will have a summary output like such.
+
+```{r}
+result<-glm(sex ~ . - flipper_length_mm, family="binomial", data=train)
+summary(result)
+```
+
+The logistic regression equation is
+
+$$
+log\left(\frac{\hat{\pi}}{1-\hat{\pi}}\right) = -103.2 -10.42I_1 -12.38I_2 + 0.09513\text{bill\\\_length\\\_mm} + 2.099 \text{bill\\\_depth\\\_mm} + 0.007714 \text{body\\\_mass\\\_g}
+$$
+
+Where $I_1 = 1$ for Chinstrap penguins while $I_2 = 1$ for Gentoo, and both values will be 0 for Adelie species.
+
+## Q1 - D
+Given that the species is held constant, we can see that all body measurement coefficients have a positive value. Given the body measurments odds of a penguin being male will increase for unit increases of the body measurments. 
+
+## Q1 - E
+The coefficient for bill length is 0.151168. For an additional bill length incraese (on average), the estimated log odds of a penguin being male increases by 0.151168, while controlling the other variables of bill_depth, flipper_length, and body_mass_g.
+
+## Q1 - F
+```{r}
+## make prediction for log odds
+newdata <- data.frame(bill_length_mm=49, bill_depth_mm=15, flipper_length_mm=220, body_mass_g=5700, species="Gentoo")
+print(predict(result, newdata))
+## Convert to ods
+odds<-exp(predict(result,newdata))
+print(odds)
+
+##convert odds to probability
+prob<-odds/(1+odds)
+print(prob)
+```
+
+The estimated log odds for this penguin being male is 6.462668 . The corresponding odds is 640.7683, and the corresponding probability is 0.9984418 .
+
+## Q1 - G
+$H_0 : \beta_1 = ... = \beta_5 = 0$
+
+$H_A: \text{at least one of the cofficients in } H_0 \text{ is not zero}$
+
+We can first find $\Delta G^2$.
+
+```{r}
+deltag2 <- result$null.deviance - result$deviance
+deltag2
+```
+```{r}
+1 - pchisq(deltag2, 5)
+```
+
+The test statistic for $\Delta G^2 = 298.4472$ with a p-value of 0. So we reject the null hyptohesis. The data supports the claim that our model is useful, compared to the intercept only model. 
+
+## Q2 - A
+The estimated coefficient for $x_3$ is $\beta_3 = 0.43397$. 
+
+The estimated log odds of a client recieves a flu shot for males is 0.43397 higher than than for females when controlling the other variables of age and aware. 
+
+## Q2 - B
+The hypothesis for the Walds tests are as follows.
+
+$$
+H_0: \beta_3 = 0 \\
+H_A: \beta_3 \neq 0
+$$
+
+The test-statsitc can be calculated with the following.
+
+$$
+\begin{aligned}
+Z &= \frac{\hat{\beta_3}}{SE(\hat{\beta_3})} \\
+&= \frac{0.43397}{0.52179} \\
+&= 0.8316947
+\end{aligned}
+$$
+
+With this test statistic we can find the corresponding p-value in R like such.
+```{r}
+2*(1-pnorm(0.8316947))
+```
+The corresponding p-value equates to a value of 0.4055813. Since this is a greater value than our threshold, we fail to reject the null hypothesis. Our data supports that gender is not a significant predictor in evaluating the probability of getting a flu shot when given a controlled age and awareness.
+
+## Q2 - C
+
+We can utilize the confidence interval for logistic regression from the textbook (Equation 13.25), which is the following
+
+$$
+\hat{\beta_j} - Z_{\frac{\alpha}{2}}se(\hat{\beta_j}) \leq \beta_j \leq \hat{\beta_j} + Z_{\frac{\alpha}{2}}se(\hat{\beta_j})
+$$
+The confidence interval computation is shown below.
+
+$$
+\begin{aligned}
+\hat{\beta_3} - Z_{\frac{\alpha}{2}}se(\hat{\beta_3}) \leq \beta_3 \leq \hat{\beta_3} + Z_{\frac{\alpha}{2}}se(\hat{\beta_3}) \\
+0.43397 - Z_{\frac{0.05}{2}} 0.52179 \leq \beta_j \leq 0.43397 + Z_{\frac{0.05}{2}} 0.52179 \\
+0.43397 - 1.959964* 0.52179 \leq \beta_j \leq 0.43397 + 1.959964* 0.52179 \\
+-0.5887196 \leq \beta_j \leq 1.456678 \\
+(-0.5887196,1.45666)
+\end{aligned}
+$$
+The qnorm function was used to calculate the $Z_{\frac{\alpha}{2}}$.
+
+```{r}
+qnorm(0.05/2) * -1
+```
+
+Thus the 95% confidence interval was (-0.5887196,1.45666). We are 95% confident that the true odds of a client recieving a flu shot for males is between $(e^{-0.5887196}, e^{1.45666}) \rightarrow (0.5550375, 4.291602)$ times the odds of a client recieving a flu shot for females. 
+
+## Q2 - D
+The conclusions of Q2-B and Q2-C are consistent since the interval contains 0 in the 95% confidence interval.
+
+## Q2 - E
+
+For this hypothesis test the null and alternate hypothesis are as follows.
+
+$$
+H_0 : \beta_1 = \beta_3 = 0 \\
+H_A: \text{at least one of the cofficients in } H_0 \text{ is not zero}
+$$
+
+The test statistic is as follows.
+
+$$
+\begin{aligned}
+\Delta G^2 &= \text{Res Dev}(Full) - \text{Res Dev}(Reduced) \\
+&= 113.20 - 105.09 \\
+&= 8.11
+\end{aligned}
+$$
+From this statsitc we can compute the p-value to be $1- pchisq(8.11, 2) = 0.01733548$. Since this p-value is lower than our threshold value, we reject the null hypothesis meaning that we can not drop the predictors of age and gener. 
+
+## Q2 - F
+
+The full logistic model is as follows.
+
+$$
+log\left(\frac{\pi}{1-\pi}\right) = -1.17716 + 0.07279age -0.09899aware + 0.43397gender
+$$
+
+Given that the client is 70 years old, with a health awareness rating of 65, and is male we can calculate the estimated probability.
+
+$$
+\begin{aligned}
+log\left(\frac{\pi}{1-\pi}\right) &= -1.17716 + 0.07279age -0.09899aware + 0.43397gender\\
+&= -1.17716 + 0.07279*(70) -0.09899*(65) + 0.43397*(1)\\
+&= -2.08224
+\end{aligned}
+$$
+
+
+Therefore, the odds will be computed to $e^{-2.08224} = 0.1246507$ and the corresponding probability is $\frac{odds}{1+odds} = \frac{0.1246507}{1+0.1246507} = 0.110835$
+
+
