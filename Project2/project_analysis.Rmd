@@ -122,7 +122,7 @@ We get the same model for forward and backward
 Let's first make a multiple linear regression model with all the predictors.
 
 ```{r}
-mlr_full = lm(charges ~  age + bmi + children + smoker + region, data=no_class_predictor)
+mlr_full = lm(charges ~  age + bmi + children + smoker + region, data=data)
 summary(mlr_full)
 ```
 The full regression is as follows.
@@ -152,10 +152,25 @@ boxcox(mlr_full, lambda=seq(0,0.3, 0.01))
 
 From the boxcox we can try a lambda value of 0.15 for transformation.
 
+QQPlot
+
+```{r}
+{
+  qqnorm(mlr_full$residuals)
+  qqline(mlr_full$residuals, col="red")
+}
+```
+
+ACF
+
+```{r}
+acf(mlr_full$residuals, main="ACF")
+```
+
 ```{r}
 first_transformation_full <- data
 first_transformation_full$charges <- first_transformation_full$charges^0.15
-mlr_transform_first <- lm(charges ~ . - significant.charge, data=first_transformation_full)
+mlr_transform_first <- lm(charges ~ age + bmi + children + smoker + region, data=first_transformation_full)
 summary(mlr_transform_first)
 ```
 
@@ -171,11 +186,70 @@ data %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
+Violation in constant variance
+
 ```{r}
 boxcox(mlr_transform_first, lambda=seq(0,3, 0.01))
 ```
 
+QQPLOT
 
+```{r}
+{
+  qqnorm(mlr_transform_first$residuals)
+  qqline(mlr_transform_first$residuals, col="red")
+}
+```
+
+## Possible Influential points?
+
+```{r}
+n = dim(data)[1]
+p = 8
+COOKS<-cooks.distance(mlr_transform_first)
+COOKS[COOKS>qf(0.5,p,n-p)]
+```
+
+## Logistic
+```{r}
+set.seed(6021) ##for reproducibility
+sample<-sample.int(nrow(first_transformation_full), floor(.50*nrow(first_transformation_full)), replace = F)
+train<- first_transformation_full[sample, ] ##training data frame
+test<-first_transformation_full[-sample, ] ##test data frame
+result<-glm(significant.charge ~ age + bmi + children + smoker + region, family="binomial", data=train)
+summary(result)
+```
+
+```{r}
+library(ROCR)
+##predicted survival rate for test data based on training data
+preds<-predict(result,newdata=test, type="response")
+##transform the input data into a format that is suited for the
+##performance() function
+rates<-prediction(preds, test$significant.charge)
+##store the true positive and false positive rates
+roc_result<-performance(rates,measure="tpr", x.measure="fpr")
+##plot ROC curve and overlay the diagonal line for random guessing
+plot(roc_result, main="ROC Curve")
+lines(x = c(0,1), y = c(0,1), col="red")
+```
+
+
+```{r}
+##compute the AUC
+auc<-performance(rates, measure = "auc")
+auc@y.values
+```
+
+
+Matrix
+```{r}
+table(test$significant.charge, preds>0.5)
+```
+
+
+
+## STOP
 ## Without Region
 
 ```{r}
@@ -249,10 +323,45 @@ Interaction Terms
 dropped_sign <- data[1:7]
 interaction1 <- lm( charges ~ (age + sex + bmi + children + region) * smoker, data = dropped_sign)
 without_inter <- lm( charges ~ age + sex + bmi + children + region + smoker, data = dropped_sign)
-anova(without_inter, interaction)
+anova(without_inter, interaction1)
 interaction2 <- lm( charges ~ (bmi) * smoker + children  + region + age, data = dropped_sign)
-anova(interaction2, interaction1)
+anova(without_inter, interaction2)
 ```
+
+See which is interaction
+
+```{r}
+transform <- data[1:7]
+transform$charges <- dropped_sign$charges^0.15
+reduced <- lm(charges ~ age + sex + bmi + children + region + smoker, data = transform)
+bmi_smoker <- lm(charges ~ age + sex + bmi*smoker + children + region, data=transform)
+anova(reduced, bmi_smoker)
+bmi_smoker_age <- lm(charges ~ age*smoker + sex + bmi*smoker + children + region, data=transform)
+anova(bmi_smoker, bmi_smoker_age)
+```
+
+```{r}
+summary(bmi_smoker_age)
+```
+
+```{r}
+yhat_inter <- bmi_smoker_age$fitted.values
+res_inter <- bmi_smoker_age$residuals
+data %>%
+  ggplot(aes(yhat_inter, res_inter)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+{
+  qqnorm(bmi_smoker_age$residuals)
+  qqline(bmi_smoker_age$residuals, col="red")
+}
+```
+
+STOP
 
 ```{r}
 summary(interaction2)
