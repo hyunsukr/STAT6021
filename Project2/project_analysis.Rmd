@@ -105,7 +105,10 @@ Forward Selection
 ```{r}
 step(regnull, scope=list(lower=regnull, upper=regfull), direction="forward")
 ```
-
+    (Intercept)             age             bmi        children       smokeryes regionsoutheast 
+    -12165.3824        257.0064        338.6413        471.5441      23843.8749       -858.4696 
+regionsouthwest 
+      -782.7452 
 ## Backwards
 ```{r}
 step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
@@ -171,3 +174,185 @@ data %>%
 ```{r}
 boxcox(mlr_transform_first, lambda=seq(0,3, 0.01))
 ```
+
+
+## Without Region
+
+```{r}
+mlr_no_region = lm(charges ~  age + bmi + children + smoker, data=no_class_predictor)
+summary(mlr_no_region)
+```
+
+Residual Plot
+```{r}
+yhat_no_region <- mlr_no_region$fitted.values
+res_no_region <- mlr_no_region$residuals
+data %>%
+  ggplot(aes(yhat_no_region, res_no_region)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(mlr_no_region, lambda=seq(-0.2,0.2, 0.01))
+```
+
+```{r}
+first_transformation_no_region <- no_class_predictor
+first_transformation_no_region$charges <- first_transformation_no_region$charges^0.15
+mlr_transform_first_no_region <- lm(charges ~ . - region , data=first_transformation_no_region)
+summary(mlr_transform_first_no_region)
+```
+
+Residual Plot
+
+```{r}
+yhat_no_region <- mlr_transform_first_no_region$fitted.values
+res_no_region <- mlr_transform_first_no_region$residuals
+data %>%
+  ggplot(aes(yhat_no_region, res_no_region)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+Box Cox
+```{r}
+boxcox(mlr_transform_first_no_region, lambda=seq(-0,2, 0.01))
+```
+
+
+```{r}
+first_transformation_no_region_log <- first_transformation_no_region
+first_transformation_no_region_log$charges <- log(first_transformation_no_region_log$charges)
+mlr_transform_first_no_region_log <- lm(charges ~ . - region , data=first_transformation_no_region_log)
+summary(mlr_transform_first_no_region_log)
+```
+
+Residual Plot
+
+```{r}
+yhat_no_region <- mlr_transform_first_no_region_log$fitted.values
+res_no_region <- mlr_transform_first_no_region_log$residuals
+data %>%
+  ggplot(aes(yhat_no_region, res_no_region)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+
+Interaction Terms
+
+```{r}
+dropped_sign <- data[1:7]
+interaction1 <- lm( charges ~ (age + sex + bmi + children + region) * smoker, data = dropped_sign)
+without_inter <- lm( charges ~ age + sex + bmi + children + region + smoker, data = dropped_sign)
+anova(without_inter, interaction)
+interaction2 <- lm( charges ~ (bmi) * smoker + children  + region + age, data = dropped_sign)
+anova(interaction2, interaction1)
+```
+
+```{r}
+summary(interaction2)
+```
+
+
+Residual Plot
+```{r}
+yhat_drop_inter <- interaction2$fitted.values
+res_drop_inter <- interaction2$residuals
+data %>%
+  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(interaction2, lambda=seq(-0,0.4, 0.01))
+```
+
+Lets try adding interaction term
+
+```{r}
+interaction2
+interaction3 <- lm( charges ~ (bmi + age) * smoker + children  + region, data = dropped_sign)
+summary(interaction3)
+anova(interaction2, interaction3)
+```
+
+
+Woops lets just go with the model
+
+```{r}
+first_transform_interaction <- dropped_sign
+first_transform_interaction$charges <- first_transform_interaction$charges^(0.25)
+mlr_interaction_transform <- lm( charges ~ (bmi) * smoker + children  + region + age, data = first_transform_interaction)
+summary(mlr_interaction_transform)
+```
+
+Residual
+```{r}
+yhat_drop_inter <- mlr_interaction_transform$fitted.values
+res_drop_inter <- mlr_interaction_transform$residuals
+data %>%
+  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+
+## BIC since nothing works lmAO
+
+```{r}
+model3_full <- lm( charges ~ bmi * smoker  * region + children + age, data = dropped_sign)
+model3_reduced <- lm( charges ~ bmi * smoker + children + age, data = dropped_sign)
+summary(model3_full)
+anova(model3_reduced, model3_full)
+```
+
+Residual plots
+
+```{r}
+yhat_drop_inter <- model3_full$fitted.values
+res_drop_inter <- model3_full$residuals
+data %>%
+  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+
+
+```{r}
+bic_model <- lm(charges ~ age + bmi + children + smoker, data = data)
+summary(bic_model)
+```
+
+```{r}
+yhat_bic <- bic_model$fitted.values
+res_bic <- bic_model$residuals
+data %>%
+  ggplot(aes(yhat_bic, res_bic)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+bic_model_interaction <- lm(charges ~ (age+ bmi + children)*smoker, data = data)
+anova(bic_model, bic_model_interaction)
+```
+
+```{r}
+bic_model_interaction2 <- lm(charges ~ (bmi) *smoker + children, data = data)
+anova(bic_model, bic_model_interaction2)
+```
+
+
+
+
