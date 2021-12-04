@@ -1,0 +1,27 @@
+---
+title: "Module12"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Set up 
+
+```{r}
+library(faraway)
+library(tidyverse)
+library(ROCR)
+data <- wcgs
+head(data)
+```
+
+
+
+
+
+

@@ -84,7 +84,7 @@ Where $I_1 = 1$ for Chinstrap penguins while $I_2 = 1$ for Gentoo, and both valu
 Given that the species is held constant, we can see that all body measurement coefficients have a positive value. Given the body measurments odds of a penguin being male will increase for unit increases of the body measurments. 
 
 ## Q1 - E
-The coefficient for bill length is 0.151168. For an additional bill length incraese (on average), the estimated log odds of a penguin being male increases by 0.151168, while controlling the other variables of bill_depth, flipper_length, and body_mass_g.
+The coefficient for bill length is 0.09513 For an additional bill length incraese (on average), the estimated log odds of a penguin being male increases by 0.09513, while controlling the other variables of bill_depth, flipper_length, and body_mass_g.
 
 ## Q1 - F
 ```{r}

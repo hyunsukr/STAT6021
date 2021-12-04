@@ -1,0 +1,75 @@
+---
+title: "Hw12"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Set up 
+
+```{r}
+library(tidyverse)
+library(palmerpenguins)
+library(gridExtra)
+library(ROCR)
+Data<-penguins
+##remove penguins with gender missing
+Data<-Data[complete.cases(Data[ , 7]),-c(2,8)]
+##80-20 split
+set.seed(1)
+sample<-sample.int(nrow(Data), floor(.80*nrow(Data)), replace = F)
+train<-Data[sample, ]
+test<-Data[-sample, ]
+head(train)
+```
+
+## 1 - A
+We first need to recreate the model.
+```{r}
+result<-glm(sex ~ . - flipper_length_mm, family="binomial", data=train)
+summary(result)
+```
+
+```{r}
+##predicted survival rate for test data based on training data
+preds<-predict(result,newdata=test, type="response")
+##transform the input data into a format that is suited for the
+##performance() function
+rates<-prediction(preds, test$sex)
+##store the true positive and false positive rates
+roc_result<-performance(rates,measure="tpr", x.measure="fpr")
+##plot ROC curve and overlay the diagonal line for random guessing
+plot(roc_result, main="ROC Curve for Penguins")
+lines(x = c(0,1), y = c(0,1), col="red")
+```
+
+## 1 - B
+
+```{r}
+##compute the AUC
+auc<-performance(rates, measure = "auc")
+auc@y.values
+```
+
+The AUC of our ROC curve is 0.9214286, which measn our logitic regressino does better than random guessing.
+
+## 1 - C
+```{r}
+table(test$sex, preds>0.5)
+```
+
+From the table above we can compute the false positive rate, false negative rate, and error rate.
+
+* The false positive rate (FRP) is $\frac{7}{7+28} \rightarrow \frac{7}{35} \rightarrow 0.2$.
+
+* The false negative rate (FNR) is $\frac{4}{4 + 28} \rightarrow \frac{4}{32} \rightarrow 0.125$
+
+## 1 - D
+
+
+
+

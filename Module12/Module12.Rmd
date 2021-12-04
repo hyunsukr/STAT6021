@@ -1,0 +1,87 @@
+---
+title: "Module12"
+author: "Hyun Suk (Max) Ryoo (hr2ee)"
+date: "11/30/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Set up 
+
+```{r}
+library(faraway)
+library(tidyverse)
+library(ROCR)
+data <- wcgs
+set.seed(6021) ##for reproducibility
+sample<-sample.int(nrow(data), floor(.50*nrow(data)), replace = F)
+train<- data[sample, ] ##training data frame
+test<-data[-sample, ] ##test data frame
+result<-glm(chd ~ age + sdp + cigs + dibep, family="binomial", data=train)
+```
+
+
+## 1
+```{r}
+result
+```
+
+## 2
+```{r}
+##predicted survival rate for test data based on training data
+preds<-predict(result,newdata=test, type="response")
+##transform the input data into a format that is suited for the
+##performance() function
+rates<-prediction(preds, test$chd)
+##store the true positive and false positive rates
+roc_result<-performance(rates,measure="tpr", x.measure="fpr")
+plot(roc_result, main="ROC Curve for chd")
+lines(x = c(0,1), y = c(0,1), col="red")
+```
+
+## 3
+```{r}
+##compute the AUC
+auc<-performance(rates, measure = "auc")
+auc@y.values
+```
+The AUC is 0.7141051. Our model is better than randomly guessing.
+
+## 4
+```{r}
+table(test$chd, preds>0.5)
+```
+
+* $TPR = \frac{0}{128} = 0$
+
+* $FPR = \frac{0}{1449} = 0$
+
+## 5
+Nah, 
+
+## 6
+It would be better to lower the threshold since we don't want to misclassify people with a developed heart disease. It's better safe than sorry.
+
+## 7
+
+```{r}
+table(test$chd, preds>0.1)
+```
+
+* $TPR = \frac{9}{128} = 0.0703125$
+
+* $FPR = \frac{45}{1449} = 0.0310559$
+
+
+## 8
+
+
+
+
+
+
+
