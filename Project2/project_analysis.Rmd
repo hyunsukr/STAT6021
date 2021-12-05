@@ -109,6 +109,7 @@ step(regnull, scope=list(lower=regnull, upper=regfull), direction="forward")
     -12165.3824        257.0064        338.6413        471.5441      23843.8749       -858.4696 
 regionsouthwest 
       -782.7452 
+
 ## Backwards
 ```{r}
 step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
@@ -210,12 +211,150 @@ COOKS<-cooks.distance(mlr_transform_first)
 COOKS[COOKS>qf(0.5,p,n-p)]
 ```
 
+## Why is this happening? Is there some weird behavior in the response variable?
+
+```{r}
+hist(data$charges)
+```
+
+```{r}
+hist(first_transformation_full$charges)
+```
+
+
+## Trial of other predictors to fullfill the linearity assumption.
+
+Maybe we can add some interaction terms to the model to see if we can fix the linearity assumption.
+
+```{r}
+interaction_age_bmi_with_smoker = lm(charges ~  age*smoker + bmi*smoker + children  + region, data=data)
+summary(interaction_age_bmi_with_smoker)
+```
+
+Residual Plot
+```{r}
+yhat_full_first_inter <- interaction_age_bmi_with_smoker$fitted.values
+res_full_first_inter <- interaction_age_bmi_with_smoker$residuals
+data %>%
+  ggplot(aes(yhat_full_first_inter, res_full_first_inter)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+This residual plot is a little better, lets see if we can transform the response with this new equation.
+
+```{r}
+boxcox(interaction_age_bmi_with_smoker, lambda=seq(0,0.3, 0.01))
+```
+
+Maybe we can use a lambda value of 0.125
+
+```{r}
+interaction_transform <- data
+interaction_transform$charges <- interaction_transform$charges^0.125
+mlr_interaction_tranform <- lm(charges ~  age*smoker + bmi*smoker + children  + region, data=interaction_transform)
+summary(mlr_interaction_tranform)
+```
+
+Recheck Residual Plot
+
+```{r}
+yhat_full_first_inter_tranform <- mlr_interaction_tranform$fitted.values
+res_full_first_inter_tranform <- mlr_interaction_tranform$residuals
+data %>%
+  ggplot(aes(yhat_full_first_inter_tranform, res_full_first_inter_tranform)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+Still see the same without adding the interaction terms.
+
+```{r}
+boxcox(mlr_interaction_tranform, lambda=seq(0,3, 0.01))
+```
+
+
+Still no luck. We retried this many times, but weren't lucky.
+
+## Partial F test of the interaction vs simple model after two transformation of response variable
+```{r}
+full <- mlr_interaction_tranform
+reduced <- lm(charges ~ age + bmi + children + smoker + region, data=interaction_transform)
+anova(reduced, full)
+```
+
+We can't drop the interaction terms.
+
+## BIC Model selection model might be better
+
+```{r}
+bic_selection_model = lm(charges ~  age + bmi + children  + smoker, data=data)
+summary(bic_selection_model)
+```
+
+Residual Plot
+
+```{r}
+yhat_bic <- bic_selection_model$fitted.values
+res_bic <- bic_selection_model$residuals
+data %>%
+  ggplot(aes(yhat_bic, res_bic)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+We see a similar plot. Transformation?
+
+```{r}
+boxcox(bic_selection_model, lambda=seq(0,0.3, 0.01))
+```
+
+Again lambda of 0.15
+
+```{r}
+bic_transform <- data
+bic_transform$charges <- bic_transform$charges^(0.15)
+bic_selection_model_transform = lm(charges ~  age + bmi + children  + smoker, data=bic_transform)
+summary(bic_selection_model_transform)
+```
+
+Residual Plot
+
+```{r}
+yhat_bic_transform <- bic_selection_model_transform$fitted.values
+res_bic_transform <- bic_selection_model_transform$residuals
+data %>%
+  ggplot(aes(yhat_bic_transform, res_bic_transform)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+Same Stuff happening.
+
+```{r}
+boxcox(bic_selection_model_transform, lambda=seq(0,3, 0.01))
+```
+
+QQPlot
+```{r}
+{
+  qqnorm(bic_selection_model_transform$residuals)
+  qqline(bic_selection_model_transform$residuals, col="red")
+}
+```
+
+
+
 ## Logistic
 ```{r}
 set.seed(6021) ##for reproducibility
-sample<-sample.int(nrow(first_transformation_full), floor(.50*nrow(first_transformation_full)), replace = F)
-train<- first_transformation_full[sample, ] ##training data frame
-test<-first_transformation_full[-sample, ] ##test data frame
+sample<-sample.int(nrow(data), floor(.50*nrow(data)), replace = F)
+train<- data[sample, ] ##training data frame
+test<-data[-sample, ] ##test data frame
 result<-glm(significant.charge ~ age + bmi + children + smoker + region, family="binomial", data=train)
 summary(result)
 ```
@@ -247,220 +386,11 @@ Matrix
 table(test$significant.charge, preds>0.5)
 ```
 
-
-
-## STOP
-## Without Region
-
+Threshold value manipulation
 ```{r}
-mlr_no_region = lm(charges ~  age + bmi + children + smoker, data=no_class_predictor)
-summary(mlr_no_region)
+table(test$significant.charge, preds>0.2)
 ```
-
-Residual Plot
-```{r}
-yhat_no_region <- mlr_no_region$fitted.values
-res_no_region <- mlr_no_region$residuals
-data %>%
-  ggplot(aes(yhat_no_region, res_no_region)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-```{r}
-boxcox(mlr_no_region, lambda=seq(-0.2,0.2, 0.01))
-```
-
-```{r}
-first_transformation_no_region <- no_class_predictor
-first_transformation_no_region$charges <- first_transformation_no_region$charges^0.15
-mlr_transform_first_no_region <- lm(charges ~ . - region , data=first_transformation_no_region)
-summary(mlr_transform_first_no_region)
-```
-
-Residual Plot
-
-```{r}
-yhat_no_region <- mlr_transform_first_no_region$fitted.values
-res_no_region <- mlr_transform_first_no_region$residuals
-data %>%
-  ggplot(aes(yhat_no_region, res_no_region)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-Box Cox
-```{r}
-boxcox(mlr_transform_first_no_region, lambda=seq(-0,2, 0.01))
-```
-
-
-```{r}
-first_transformation_no_region_log <- first_transformation_no_region
-first_transformation_no_region_log$charges <- log(first_transformation_no_region_log$charges)
-mlr_transform_first_no_region_log <- lm(charges ~ . - region , data=first_transformation_no_region_log)
-summary(mlr_transform_first_no_region_log)
-```
-
-Residual Plot
-
-```{r}
-yhat_no_region <- mlr_transform_first_no_region_log$fitted.values
-res_no_region <- mlr_transform_first_no_region_log$residuals
-data %>%
-  ggplot(aes(yhat_no_region, res_no_region)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-
-Interaction Terms
-
-```{r}
-dropped_sign <- data[1:7]
-interaction1 <- lm( charges ~ (age + sex + bmi + children + region) * smoker, data = dropped_sign)
-without_inter <- lm( charges ~ age + sex + bmi + children + region + smoker, data = dropped_sign)
-anova(without_inter, interaction1)
-interaction2 <- lm( charges ~ (bmi) * smoker + children  + region + age, data = dropped_sign)
-anova(without_inter, interaction2)
-```
-
-See which is interaction
-
-```{r}
-transform <- data[1:7]
-transform$charges <- dropped_sign$charges^0.15
-reduced <- lm(charges ~ age + sex + bmi + children + region + smoker, data = transform)
-bmi_smoker <- lm(charges ~ age + sex + bmi*smoker + children + region, data=transform)
-anova(reduced, bmi_smoker)
-bmi_smoker_age <- lm(charges ~ age*smoker + sex + bmi*smoker + children + region, data=transform)
-anova(bmi_smoker, bmi_smoker_age)
-```
-
-```{r}
-summary(bmi_smoker_age)
-```
-
-```{r}
-yhat_inter <- bmi_smoker_age$fitted.values
-res_inter <- bmi_smoker_age$residuals
-data %>%
-  ggplot(aes(yhat_inter, res_inter)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-```{r}
-{
-  qqnorm(bmi_smoker_age$residuals)
-  qqline(bmi_smoker_age$residuals, col="red")
-}
-```
-
-STOP
-
-```{r}
-summary(interaction2)
-```
-
-
-Residual Plot
-```{r}
-yhat_drop_inter <- interaction2$fitted.values
-res_drop_inter <- interaction2$residuals
-data %>%
-  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-```{r}
-boxcox(interaction2, lambda=seq(-0,0.4, 0.01))
-```
-
-Lets try adding interaction term
-
-```{r}
-interaction2
-interaction3 <- lm( charges ~ (bmi + age) * smoker + children  + region, data = dropped_sign)
-summary(interaction3)
-anova(interaction2, interaction3)
-```
-
-
-Woops lets just go with the model
-
-```{r}
-first_transform_interaction <- dropped_sign
-first_transform_interaction$charges <- first_transform_interaction$charges^(0.25)
-mlr_interaction_transform <- lm( charges ~ (bmi) * smoker + children  + region + age, data = first_transform_interaction)
-summary(mlr_interaction_transform)
-```
-
-Residual
-```{r}
-yhat_drop_inter <- mlr_interaction_transform$fitted.values
-res_drop_inter <- mlr_interaction_transform$residuals
-data %>%
-  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-
-## BIC since nothing works lmAO
-
-```{r}
-model3_full <- lm( charges ~ bmi * smoker  * region + children + age, data = dropped_sign)
-model3_reduced <- lm( charges ~ bmi * smoker + children + age, data = dropped_sign)
-summary(model3_full)
-anova(model3_reduced, model3_full)
-```
-
-Residual plots
-
-```{r}
-yhat_drop_inter <- model3_full$fitted.values
-res_drop_inter <- model3_full$residuals
-data %>%
-  ggplot(aes(yhat_drop_inter, res_drop_inter)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-
-
-```{r}
-bic_model <- lm(charges ~ age + bmi + children + smoker, data = data)
-summary(bic_model)
-```
-
-```{r}
-yhat_bic <- bic_model$fitted.values
-res_bic <- bic_model$residuals
-data %>%
-  ggplot(aes(yhat_bic, res_bic)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-```{r}
-bic_model_interaction <- lm(charges ~ (age+ bmi + children)*smoker, data = data)
-anova(bic_model, bic_model_interaction)
-```
-
-```{r}
-bic_model_interaction2 <- lm(charges ~ (bmi) *smoker + children, data = data)
-anova(bic_model, bic_model_interaction2)
-```
+Doesn't play a huge role in decreasing the False Positive Rate. We want to make sure that when someone signs up for a plan that they don't get charged significantly given their condition.
 
 
 
