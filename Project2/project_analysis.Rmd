@@ -202,14 +202,63 @@ QQPLOT
 }
 ```
 
-## Possible Influential points?
+## Externally Studentized Residuals
+
+```{r}
+res<-mlr_transform_first$residuals
+standard.res<-res/summary(mlr_transform_first)$sigma
+student.res <- rstandard(mlr_transform_first)
+ext.student.res<-rstudent(mlr_transform_first)
+res.frame<-data.frame(res,standard.res, student.res,ext.student.res)
+```
+
+## Outlier Detection
+```{r}
+summary(mlr_transform_first)
+```
+
 
 ```{r}
 n = dim(data)[1]
 p = 8
+crit<-qt(1-0.05/(2*n), n-p-1)
+ext.student.res[abs(ext.student.res)>crit]
+```
+
+
+## Possible Leverages
+```{r}
+lev<-lm.influence(mlr_transform_first)$hat
+##identify high leverage points
+lev[lev>2*p/n]
+```
+
+
+## Influential Observations
+
+```{r}
 COOKS<-cooks.distance(mlr_transform_first)
 COOKS[COOKS>qf(0.5,p,n-p)]
 ```
+
+## DFFITs
+```{r}
+DFFITS<-dffits(mlr_transform_first)
+DFFITS[abs(DFFITS)>2*sqrt(p/n)]
+```
+
+
+## DFBETAs
+```{r}
+##dfbetas
+DFBETAS<-dfbetas(mlr_transform_first)
+DFBETAS[abs(DFBETAS[,1])>2/sqrt(n),1]
+```
+
+```{r}
+DFBETAS[abs(DFBETAS[,1])>2/sqrt(n),2]
+```
+
 
 ## Why is this happening? Is there some weird behavior in the response variable?
 
