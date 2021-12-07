@@ -22,6 +22,8 @@ head(data)
 
 ```{r}
 data$significant.charge = as.factor(data$charges > median(data$charges))
+data$smoker = as.factor(data$smoker)
+data$region = as.factor(data$region)
 head(data)
 ```
 ```{r}
@@ -396,6 +398,249 @@ QQPlot
 }
 ```
 
+## Change the data split the data ?
+```{r}
+less_charge <- data[data$charges < 20000,]
+more_change <- data[data$charges >= 20000, ]
+library(tidyverse)
+ggplot(aes(x=bmi, y=charges, color=smoker), data=less_charge) + 
+  labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
+  theme_bw() +
+  geom_point()
+ggplot(aes(x=age,y=charges, color=smoker, size=bmi), data=less_charge) + 
+  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+  theme_bw() +
+  geom_point(alpha=0.5)
+
+ggplot(aes(x=bmi, y=charges, color=smoker), data=more_change) + 
+  labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
+  theme_bw() +
+  geom_point()
+ggplot(aes(x=age,y=charges, color=smoker, size=bmi), data=more_change) + 
+  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+  theme_bw() +
+  geom_point(alpha=0.5)
+```
+
+```{r}
+pairs(more_change[c("age", "bmi", "charges")])
+pairs(less_charge[c("age", "bmi", "charges")])
+```
+```{r}
+mlr_full_smoker = lm(charges ~  (age + bmi + children + region) * smoker, data=data)
+summary(mlr_full_smoker)
+```
+
+## Assumption Check of Full Model
+```{r}
+yhat_full_smoker <- mlr_full_smoker$fitted.values
+res_full_smoker <- mlr_full_smoker$residuals
+data %>%
+  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+The residuals are obviously not evenly scattered, which then we can utilize the boxcox method to give us information about transformation.
+
+```{r}
+boxcox(mlr_full_smoker, lambda=seq(0,0.3, 0.01))
+```
+
+From the boxcox we can try a lambda value of 0.1 for transformation.
+
+```{r}
+interaction_transform_smoker <- data
+interaction_transform_smoker$charges <- interaction_transform_smoker$charges^0.1
+mlr_interaction_tranform_smoker <- lm(charges ~  (age + bmi + children + region) * smoker, data=interaction_transform_smoker)
+summary(mlr_interaction_tranform_smoker)
+```
+
+```{r}
+yhat_full_smoker <- mlr_interaction_tranform_smoker$fitted.values
+res_full_smoker <- mlr_interaction_tranform_smoker$residuals
+data %>%
+  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+
+Lets SPLIT BY SMOKERS
+
+```{r}
+smokers <- data[data$smoker == 'yes',]
+non_smokers <- data[data$smoker != 'yes',]
+```
+
+```{r}
+## Smokers
+##intercept only model
+regnull_smoker <- lm(charges~1, data=smokers)
+##model with all predictors
+regfull_smoker <- lm(charges ~ age + sex + bmi + children + region , data=smokers)
+```
+
+Forward Selection
+```{r}
+step(regnull_smoker, scope=list(lower=regnull_smoker, upper=regfull_smoker), direction="forward")
+```
+
+```{r}
+#Non smokers
+regnull_non_smokers <- lm(charges~1, data=non_smokers)
+##model with all predictors
+regfull_non_smokers <- lm(charges ~ age + sex + bmi + children + region , data=non_smokers)
+```
+
+Forward Selection
+```{r}
+step(regnull_non_smokers, scope=list(lower=regnull_non_smokers, upper=regfull_non_smokers), direction="forward")
+```
+
+## We get different models
+
+```{r}
+mlr_full_smoker = lm(charges ~  bmi+age , data=smokers)
+summary(mlr_full_smoker)
+```
+
+
+```{r}
+yhat_full_smoker <- mlr_full_smoker$fitted.values
+res_full_smoker <- mlr_full_smoker$residuals
+smokers %>%
+  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(mlr_full_smoker)
+```
+
+Rseponse needs to be transformed 
+
+```{r}
+smokers_transform <- smokers
+smokers_transform$charges <- smokers_transform$charges^0.5
+mlr_full_smoker_transform = lm(charges ~  bmi+age , data=smokers_transform)
+summary(mlr_full_smoker_transform)
+```
+
+residual plot
+
+```{r}
+yhat_full_smoker <- mlr_full_smoker_transform$fitted.values
+res_full_smoker <- mlr_full_smoker_transform$residuals
+smokers %>%
+  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(mlr_full_smoker_transform)
+```
+
+QQPlot
+
+```{r}
+{
+  qqnorm(mlr_full_smoker_transform$residuals)
+  qqline(mlr_full_smoker_transform$residuals, col="red")
+}
+```
+
+ACF
+
+```{r}
+acf(mlr_full_smoker_transform$residuals, main="ACF")
+```
+
+
+
+## Non Smokers
+```{r}
+mlr_full_non_smoker = lm(formula = charges ~ age + children + region + sex, data = non_smokers)
+summary(mlr_full_non_smoker)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker$residuals
+non_smokers %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+Transformation
+```{r}
+boxcox(mlr_full_non_smoker, c(-0.5, 0.5, 0.1))
+```
+
+```{r}
+non_smoker_transform <- non_smokers
+non_smoker_transform$charges <- non_smoker_transform$charges^(-0.1)
+mlr_full_non_smoker_transform = lm(formula = charges ~ age + children + region + sex, data = non_smoker_transform)
+summary(mlr_full_non_smoker_transform)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_transform$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_transform$residuals
+non_smokers %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+
+```{r}
+boxcox(mlr_full_non_smoker_transform)
+```
+
+QQPlot
+
+```{r}
+{
+  qqnorm(mlr_full_non_smoker_transform$residuals)
+  qqline(mlr_full_non_smoker_transform$residuals, col="red")
+}
+```
+
+ACF
+
+```{r}
+acf(mlr_full_smoker_transform$residuals, main="ACF")
+```
+
+```{r}
+head(non_smokers)
+```
+```{r}
+# charges ~ age + children + region + sex
+non_smokers %>%
+  ggplot(aes(x=age, y=charges)) + 
+  theme_bw() +
+  geom_point(alpha=0.5)
+```
+
+## Next Steps
+We need to find for non smokers what is causing some data points to be more charges...?
+```{r}
+non_smokers %>%
+  ggplot(aes(x=age, y=charges, size=children, color=region)) + 
+  theme_bw() +
+  geom_point(alpha=0.5)
+```
 
 
 ## Logistic
@@ -440,7 +685,3 @@ Threshold value manipulation
 table(test$significant.charge, preds>0.2)
 ```
 Doesn't play a huge role in decreasing the False Positive Rate. We want to make sure that when someone signs up for a plan that they don't get charged significantly given their condition.
-
-
-
-
