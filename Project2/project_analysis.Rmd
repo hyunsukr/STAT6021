@@ -55,6 +55,13 @@ ggplot(data, aes(x=region, y=age, fill=as.factor(significant.charge)))+
 ```
 
 ```{r}
+ggplot(data, aes(x=as.factor(children), y=charges))+
+  geom_boxplot() +
+  theme_bw() +
+  labs(x="region", y="ages", title="Dist of bmi by region and smoker status")
+```
+
+```{r}
 ggplot(data, aes(x=smoker, y=bmi, fill=as.factor(significant.charge)))+
   geom_boxplot() +
   theme_bw() +
@@ -204,64 +211,6 @@ QQPLOT
 }
 ```
 
-## Externally Studentized Residuals
-
-```{r}
-res<-mlr_transform_first$residuals
-standard.res<-res/summary(mlr_transform_first)$sigma
-student.res <- rstandard(mlr_transform_first)
-ext.student.res<-rstudent(mlr_transform_first)
-res.frame<-data.frame(res,standard.res, student.res,ext.student.res)
-```
-
-## Outlier Detection
-```{r}
-summary(mlr_transform_first)
-```
-
-
-```{r}
-n = dim(data)[1]
-p = 8
-crit<-qt(1-0.05/(2*n), n-p-1)
-ext.student.res[abs(ext.student.res)>crit]
-```
-
-
-## Possible Leverages
-```{r}
-lev<-lm.influence(mlr_transform_first)$hat
-##identify high leverage points
-lev[lev>2*p/n]
-```
-
-
-## Influential Observations
-
-```{r}
-COOKS<-cooks.distance(mlr_transform_first)
-COOKS[COOKS>qf(0.5,p,n-p)]
-```
-
-## DFFITs
-```{r}
-DFFITS<-dffits(mlr_transform_first)
-DFFITS[abs(DFFITS)>2*sqrt(p/n)]
-```
-
-
-## DFBETAs
-```{r}
-##dfbetas
-DFBETAS<-dfbetas(mlr_transform_first)
-DFBETAS[abs(DFBETAS[,1])>2/sqrt(n),1]
-```
-
-```{r}
-DFBETAS[abs(DFBETAS[,1])>2/sqrt(n),2]
-```
-
-
 ## Why is this happening? Is there some weird behavior in the response variable?
 
 ```{r}
@@ -404,20 +353,21 @@ less_charge <- data[data$charges < 20000,]
 more_change <- data[data$charges >= 20000, ]
 library(tidyverse)
 ggplot(aes(x=bmi, y=charges, color=smoker), data=less_charge) + 
-  labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
+  labs(title="Scatter Plot of Charges vs BMI by Smoker Status for charges < 20,000") +
   theme_bw() +
   geom_point()
-ggplot(aes(x=age,y=charges, color=smoker, size=bmi), data=less_charge) + 
-  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+ggplot(aes(x=age,y=charges, color=smoker), data=less_charge) + 
+  labs(title="Scatter plot of Charges vs Age by Smoker Status charges < 20,000") +
   theme_bw() +
   geom_point(alpha=0.5)
 
 ggplot(aes(x=bmi, y=charges, color=smoker), data=more_change) + 
-  labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
+  labs(title="Scatter Plot of Charges vs BMI by Smoker Status charges > 20,000") +
   theme_bw() +
   geom_point()
-ggplot(aes(x=age,y=charges, color=smoker, size=bmi), data=more_change) + 
-  labs(title="Scatter plot of Charges vs Age by BMI and Smoker Status") +
+
+ggplot(aes(x=age,y=charges, color=smoker), data=more_change) + 
+  labs(title="Scatter plot of Charges vs Age by Smoker Status charges > 20,000") +
   theme_bw() +
   geom_point(alpha=0.5)
 ```
@@ -473,6 +423,25 @@ Lets SPLIT BY SMOKERS
 ```{r}
 smokers <- data[data$smoker == 'yes',]
 non_smokers <- data[data$smoker != 'yes',]
+
+ggplot(aes(x=bmi, y=charges, color=smoker), data=smokers) + 
+  labs(title="Scatter Plot of Charges vs BMI For Smokers") +
+  theme_bw() +
+  geom_point()
+ggplot(aes(x=age,y=charges, color=smoker), data=smokers) + 
+  labs(title="Scatter plot of Charges vs Age For Smokers") +
+  theme_bw() +
+  geom_point(alpha=0.5)
+
+ggplot(aes(x=bmi, y=charges, color=smoker), data=non_smokers) + 
+  labs(title="Scatter Plot of Charges vs BMI For Non_Smokers") +
+  theme_bw() +
+  geom_point()
+
+ggplot(aes(x=age,y=charges, color=smoker), data=non_smokers) + 
+  labs(title="Scatter plot of Charges vs Age For Non_Smokers") +
+  theme_bw() +
+  geom_point(alpha=0.5)
 ```
 
 ```{r}
@@ -528,6 +497,8 @@ Rseponse needs to be transformed
 smokers_transform <- smokers
 smokers_transform$charges <- smokers_transform$charges^0.5
 mlr_full_smoker_transform = lm(charges ~  bmi+age , data=smokers_transform)
+mlr_full_smoker_transform_full = lm(charges ~  bmi+age + sex + region , data=smokers_transform)
+
 summary(mlr_full_smoker_transform)
 ```
 
@@ -562,6 +533,64 @@ ACF
 acf(mlr_full_smoker_transform$residuals, main="ACF")
 ```
 
+## What about Region
+```{r}
+mlr_full_smoker_full = lm(charges ~  bmi+age+children+region , data=smokers_transform)
+summary(mlr_full_smoker_full)
+```
+
+```{r}
+yhat_full_smoker <- mlr_full_smoker_full$fitted.values
+res_full_smoker <- mlr_full_smoker_full$residuals
+smokers %>%
+  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+Residual Seems Fine, can we drop these predictors?
+```{r}
+summary(mlr_full_smoker_transform)
+anova(mlr_full_smoker_transform,mlr_full_smoker_transform_full )
+```
+We can drop these other predictors
+
+## Outliers
+
+```{r}
+##critical value using Bonferroni procedure
+n<-dim(smokers_transform)[1]
+p<-3
+crit<-qt(1-0.05/(2*n), n-1-p)
+##externally studentized residuals
+ext.student.res<-rstudent(mlr_full_smoker_transform)
+##identify
+ext.student.res[abs(ext.student.res)>crit]
+```
+
+```{r}
+##leverages
+lev<-lm.influence(mlr_full_smoker_transform)$hat
+##identify
+round(lev[lev>2*p/n],4)
+```
+
+```{r}
+DFFITS<-dffits(mlr_full_smoker_transform)
+round(DFFITS[abs(DFFITS)>2*sqrt(p/n)],3)
+```
+
+```{r}
+DFBETAS<-dfbetas(mlr_full_smoker_transform)
+tempdfbetas = abs(DFBETAS)>2/sqrt(n)
+tempdfbetas[(tempdfbetas[,1] == TRUE | tempdfbetas[,2] == TRUE | tempdfbetas[,3] == TRUE ) ,]
+```
+
+```{r}
+COOKS<-cooks.distance(mlr_full_smoker_transform)
+COOKS[COOKS>qf(0.5,p,n-p)]
+```
 
 
 ## Non Smokers
@@ -587,7 +616,7 @@ boxcox(mlr_full_non_smoker, c(-0.5, 0.5, 0.1))
 
 ```{r}
 non_smoker_transform <- non_smokers
-non_smoker_transform$charges <- non_smoker_transform$charges^(-0.1)
+non_smoker_transform$charges <- log(non_smoker_transform$charges)
 mlr_full_non_smoker_transform = lm(formula = charges ~ age + children + region + sex, data = non_smoker_transform)
 summary(mlr_full_non_smoker_transform)
 ```
@@ -625,6 +654,7 @@ acf(mlr_full_smoker_transform$residuals, main="ACF")
 ```{r}
 head(non_smokers)
 ```
+
 ```{r}
 # charges ~ age + children + region + sex
 non_smokers %>%
@@ -642,11 +672,50 @@ non_smokers %>%
   geom_point(alpha=0.5)
 ```
 
+## Try checking log of age?
+
+```{r}
+mlr_full_non_smoker_log_age = lm(formula = (charges)^(-0.2) ~ log(age) + children + region + sex, data = non_smokers)
+summary(mlr_full_non_smoker_log_age)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_log_age$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_log_age$residuals
+non_smokers %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(mlr_full_non_smoker_log_age, c(0,3,0.1))
+```
+
+
+## Interaction age and region?
+```{r}
+mlr_full_non_smoker_region_inter = lm(formula = charges ~ (age)*bmi + region + children + sex, data = non_smokers)
+summary(mlr_full_non_smoker_region_inter)
+```
+
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_region_inter$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_region_inter$residuals
+non_smokers %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
 
 ## Logistic
 ```{r}
 set.seed(6021) ##for reproducibility
-sample<-sample.int(nrow(data), floor(.50*nrow(data)), replace = F)
+sample<-sample.int(nrow(data), floor(.70*nrow(data)), replace = F)
 train<- data[sample, ] ##training data frame
 test<-data[-sample, ] ##test data frame
 result<-glm(significant.charge ~ age + bmi + children + smoker + region, family="binomial", data=train)
@@ -682,6 +751,13 @@ table(test$significant.charge, preds>0.5)
 
 Threshold value manipulation
 ```{r}
-table(test$significant.charge, preds>0.2)
+table(test$significant.charge, preds>0.25)
 ```
 Doesn't play a huge role in decreasing the False Positive Rate. We want to make sure that when someone signs up for a plan that they don't get charged significantly given their condition.
+
+```{r}
+test<-data.frame(test,preds)
+ggplot(test,aes(x=preds))+
+geom_density()+
+labs(title="Density Plot of Predicted Probs") + theme_bw()
+```
