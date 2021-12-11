@@ -616,7 +616,7 @@ boxcox(mlr_full_non_smoker, c(-0.5, 0.5, 0.1))
 
 ```{r}
 non_smoker_transform <- non_smokers
-non_smoker_transform$charges <- log(non_smoker_transform$charges)
+non_smoker_transform$charges <- non_smoker_transform$charges^(-0.1)
 mlr_full_non_smoker_transform = lm(formula = charges ~ age + children + region + sex, data = non_smoker_transform)
 summary(mlr_full_non_smoker_transform)
 ```
@@ -658,10 +658,92 @@ head(non_smokers)
 ```{r}
 # charges ~ age + children + region + sex
 non_smokers %>%
-  ggplot(aes(x=age, y=charges)) + 
+  ggplot(aes(x=age, y=charges, color=region, size=children)) + 
   theme_bw() +
   geom_point(alpha=0.5)
 ```
+
+
+## Lets drop these outliers. 
+```{r}
+drop_outleirs <- non_smokers
+DFFITS<-dffits(mlr_full_non_smoker)
+want_drop = names(DFFITS[abs(DFFITS)>2*sqrt(5/1064)])
+drop_outleirs = non_smokers[setdiff(rownames(non_smokers), want_drop),]
+(dim(non_smokers)[1] - dim(drop_outleirs)[1]) / dim(non_smokers)[1]
+```
+
+```{r}
+mlr_full_non_smoker_transform_drop = lm(formula = charges ~  region + age + children + sex, data = drop_outleirs)
+summary(mlr_full_non_smoker_transform_drop)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_transform_drop$residuals
+drop_outleirs %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+```{r}
+drop_outleirs %>%
+  ggplot(aes(x=age, y=charges, color=region, size=children)) + 
+  theme_bw() +
+  geom_point(alpha=0.5)
+```
+```{r}
+boxcox(mlr_full_non_smoker_transform_drop)
+```
+```{r}
+mlr_full_non_smoker_transform_drop2 = lm(formula = (charges)^0.5 ~ age + children + region + sex, data = drop_outleirs)
+summary(mlr_full_non_smoker_transform_drop2)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop2$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_transform_drop2$residuals
+drop_outleirs %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+## Second dropping
+```{r}
+drop_outleirs2 <- drop_outleirs
+DFFITS<-dffits(mlr_full_non_smoker_transform_drop2)
+want_drop = names(DFFITS[abs(DFFITS)>2*sqrt(5/975)])
+drop_outleirs2 = drop_outleirs[setdiff(rownames(drop_outleirs), want_drop),]
+(dim(drop_outleirs)[1] - dim(drop_outleirs2)[1]) / dim(drop_outleirs)[1]
+(dim(non_smokers)[1] - dim(drop_outleirs2)[1]) / dim(non_smokers)[1]
+
+head(drop_outleirs2)
+```
+
+```{r}
+drop_outleirs2 %>%
+  ggplot(aes(x=age, y=charges, color=region, size=children)) + 
+  geom_point(alpha = 0.4) + theme_bw()
+```
+
+```{r}
+mlr_full_non_smoker_transform_drop3 = lm(formula = (charges)^0.5 ~  region + age + children + sex, data = drop_outleirs2)
+summary(mlr_full_non_smoker_transform_drop3)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop3$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_transform_drop3$residuals
+drop_outleirs2 %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
 
 ## Next Steps
 We need to find for non smokers what is causing some data points to be more charges...?
