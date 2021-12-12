@@ -744,6 +744,17 @@ drop_outleirs2 %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
+```{r}
+boxcox(mlr_full_non_smoker_transform_drop3)
+```
+
+```{r}
+{
+  qqnorm(mlr_full_non_smoker_transform_drop3$residuals)
+  qqline(mlr_full_non_smoker_transform_drop3$residuals, col="red")
+}
+```
+
 
 ## Next Steps
 We need to find for non smokers what is causing some data points to be more charges...?
@@ -800,7 +811,7 @@ set.seed(6021) ##for reproducibility
 sample<-sample.int(nrow(data), floor(.70*nrow(data)), replace = F)
 train<- data[sample, ] ##training data frame
 test<-data[-sample, ] ##test data frame
-result<-glm(significant.charge ~ age + bmi + children + smoker + region, family="binomial", data=train)
+result<-glm(significant.charge ~ age + bmi + children + smoker + region + sex, family="binomial", data=train)
 summary(result)
 ```
 
