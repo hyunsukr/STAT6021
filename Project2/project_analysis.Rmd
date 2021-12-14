@@ -9,6 +9,8 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+## Data processing
 ```{r}
 ## Data Processing
 library(tidyverse)
@@ -26,6 +28,9 @@ data$smoker = as.factor(data$smoker)
 data$region = as.factor(data$region)
 head(data)
 ```
+
+## Initial EDA
+
 ```{r}
 ggplot(aes(x=bmi, y=charges, color=smoker), data=data) + 
   labs(title="Scatter Plot of Charges vs BMI by Smoker Status") +
@@ -78,70 +83,13 @@ pairs(data[c("age", "bmi", "charges")])
 ```{r}
 round(cor(data[c("age", "bmi", "charges")]),4)
 ```
-## All possible regressions and pull based on adjusted R square, mallow, and BIC
 
-```{r}
-no_class_predictor = data[1:7]
-allreg2 <- regsubsets(charges ~., data=no_class_predictor, nbest=2)
-summary(allreg2)
-```
-
-## Best for Adjusted R square
-```{r}
-coef(allreg2, which.max(summary(allreg2)$adjr2))
-```
-
-## Best for Mallows 
-```{r}
-coef(allreg2, which.min(summary(allreg2)$cp))
-```
-
-## Best for BIC
-```{r}
-coef(allreg2, which.min(summary(allreg2)$bic))
-```
-
-
-## Forward Selection
-```{r}
-##intercept only model
-regnull <- lm(charges~1, data=no_class_predictor)
-##model with all predictors
-regfull <- lm(charges ~ . , data=no_class_predictor)
-```
-
-Forward Selection
-```{r}
-step(regnull, scope=list(lower=regnull, upper=regfull), direction="forward")
-```
-    (Intercept)             age             bmi        children       smokeryes regionsoutheast 
-    -12165.3824        257.0064        338.6413        471.5441      23843.8749       -858.4696 
-regionsouthwest 
-      -782.7452 
-
-## Backwards
-```{r}
-step(regfull, scope=list(lower=regnull, upper=regfull), direction="backward")
-```
-
-
-## Based on forward and backward 
-
-We get the same model for forward and backward
-
-Let's first make a multiple linear regression model with all the predictors.
-
+## Blind Full Model
 ```{r}
 mlr_full = lm(charges ~  age + bmi + children + smoker + region, data=data)
 summary(mlr_full)
 ```
 The full regression is as follows.
-
-$$
-\hat{y} = -11938.5 + 256.9\text{age} -131.3I_1 + 339.2\text{bmi} + 475.5\text{children} + 23848.5I_2 - 353.0I_3 - 1035.0I_4 - 960.0I_5
-$$
-
-$I_1$ indicates whether the sex of the client is male. The value will be 0 for females. $I_2$ indicates whether that a client smokes. The value will be 0 for non smokers. $I_3$ indicates that the client is in the northwest region. $I_4$ indicates that the client is located in the southeast. $I_5$ indicates that the client is located inthe southwest. If the client is in the northeast $I_3, I_4, I_5$ will be zero, since this is the reference class. 
 
 ## Assumption Check of Full Model
 ```{r}
@@ -162,7 +110,7 @@ boxcox(mlr_full, lambda=seq(0,0.3, 0.01))
 
 From the boxcox we can try a lambda value of 0.15 for transformation.
 
-QQPlot
+QQPlot Normality of Full Model
 
 ```{r}
 {
@@ -171,12 +119,14 @@ QQPlot
 }
 ```
 
-ACF
+ACF of full model
 
 ```{r}
 acf(mlr_full$residuals, main="ACF")
 ```
 
+
+## Transformation of full model
 ```{r}
 first_transformation_full <- data
 first_transformation_full$charges <- first_transformation_full$charges^0.15
@@ -202,7 +152,7 @@ Violation in constant variance
 boxcox(mlr_transform_first, lambda=seq(0,3, 0.01))
 ```
 
-QQPLOT
+QQPLOT of transformed full model.
 
 ```{r}
 {
@@ -287,7 +237,7 @@ anova(reduced, full)
 
 We can't drop the interaction terms.
 
-## BIC Model selection model might be better
+## Try different models before splitting the data
 
 ```{r}
 bic_selection_model = lm(charges ~  age + bmi + children  + smoker, data=data)
@@ -333,11 +283,6 @@ data %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
-Same Stuff happening.
-
-```{r}
-boxcox(bic_selection_model_transform, lambda=seq(0,3, 0.01))
-```
 
 QQPlot
 ```{r}
@@ -347,7 +292,10 @@ QQPlot
 }
 ```
 
-## Change the data split the data ?
+# See the two groupings
+
+## Check the data points below and above 20,000
+
 ```{r}
 less_charge <- data[data$charges < 20000,]
 more_change <- data[data$charges >= 20000, ]
@@ -376,49 +324,8 @@ ggplot(aes(x=age,y=charges, color=smoker), data=more_change) +
 pairs(more_change[c("age", "bmi", "charges")])
 pairs(less_charge[c("age", "bmi", "charges")])
 ```
-```{r}
-mlr_full_smoker = lm(charges ~  (age + bmi + children + region) * smoker, data=data)
-summary(mlr_full_smoker)
-```
 
-## Assumption Check of Full Model
-```{r}
-yhat_full_smoker <- mlr_full_smoker$fitted.values
-res_full_smoker <- mlr_full_smoker$residuals
-data %>%
-  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-The residuals are obviously not evenly scattered, which then we can utilize the boxcox method to give us information about transformation.
-
-```{r}
-boxcox(mlr_full_smoker, lambda=seq(0,0.3, 0.01))
-```
-
-From the boxcox we can try a lambda value of 0.1 for transformation.
-
-```{r}
-interaction_transform_smoker <- data
-interaction_transform_smoker$charges <- interaction_transform_smoker$charges^0.1
-mlr_interaction_tranform_smoker <- lm(charges ~  (age + bmi + children + region) * smoker, data=interaction_transform_smoker)
-summary(mlr_interaction_tranform_smoker)
-```
-
-```{r}
-yhat_full_smoker <- mlr_interaction_tranform_smoker$fitted.values
-res_full_smoker <- mlr_interaction_tranform_smoker$residuals
-data %>%
-  ggplot(aes(yhat_full_smoker, res_full_smoker)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-
-Lets SPLIT BY SMOKERS
+## Split dataset by smoking status
 
 ```{r}
 smokers <- data[data$smoker == 'yes',]
@@ -444,6 +351,9 @@ ggplot(aes(x=age,y=charges, color=smoker), data=non_smokers) +
   geom_point(alpha=0.5)
 ```
 
+
+## Smokers forward selection
+
 ```{r}
 ## Smokers
 ##intercept only model
@@ -457,6 +367,8 @@ Forward Selection
 step(regnull_smoker, scope=list(lower=regnull_smoker, upper=regfull_smoker), direction="forward")
 ```
 
+
+## Non Smokers forward selection
 ```{r}
 #Non smokers
 regnull_non_smokers <- lm(charges~1, data=non_smokers)
@@ -469,13 +381,14 @@ Forward Selection
 step(regnull_non_smokers, scope=list(lower=regnull_non_smokers, upper=regfull_non_smokers), direction="forward")
 ```
 
-## We get different models
+## We get different models (first smokers)
 
 ```{r}
 mlr_full_smoker = lm(charges ~  bmi+age , data=smokers)
 summary(mlr_full_smoker)
 ```
 
+Residual Plot of smokers looks the best so far.
 
 ```{r}
 yhat_full_smoker <- mlr_full_smoker$fitted.values
@@ -498,11 +411,10 @@ smokers_transform <- smokers
 smokers_transform$charges <- smokers_transform$charges^0.5
 mlr_full_smoker_transform = lm(charges ~  bmi+age , data=smokers_transform)
 mlr_full_smoker_transform_full = lm(charges ~  bmi+age + sex + region , data=smokers_transform)
-
 summary(mlr_full_smoker_transform)
 ```
 
-residual plot
+residual plot for transformed response variable for smoerks
 
 ```{r}
 yhat_full_smoker <- mlr_full_smoker_transform$fitted.values
@@ -518,7 +430,7 @@ smokers %>%
 boxcox(mlr_full_smoker_transform)
 ```
 
-QQPlot
+QQPlot Smokers
 
 ```{r}
 {
@@ -527,18 +439,20 @@ QQPlot
 }
 ```
 
-ACF
+ACF for somkers
 
 ```{r}
 acf(mlr_full_smoker_transform$residuals, main="ACF")
 ```
 
-## What about Region
+## Can we drop the other predictors?
 ```{r}
 mlr_full_smoker_full = lm(charges ~  bmi+age+children+region , data=smokers_transform)
 summary(mlr_full_smoker_full)
 ```
 
+
+## Residual of full model for smokers
 ```{r}
 yhat_full_smoker <- mlr_full_smoker_full$fitted.values
 res_full_smoker <- mlr_full_smoker_full$residuals
@@ -549,14 +463,15 @@ smokers %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
-Residual Seems Fine, can we drop these predictors?
+Residual Seems Fine, can we drop these predictors using partial F - test.
 ```{r}
 summary(mlr_full_smoker_transform)
 anova(mlr_full_smoker_transform,mlr_full_smoker_transform_full )
 ```
-We can drop these other predictors
 
-## Outliers
+We can drop these other predictors since p-value is above 0.05
+
+## Outliers detection
 
 ```{r}
 ##critical value using Bonferroni procedure
@@ -593,7 +508,10 @@ COOKS[COOKS>qf(0.5,p,n-p)]
 ```
 
 
-## Non Smokers
+## Non Smokers Analysis
+
+Predictors from forward selection process.
+
 ```{r}
 mlr_full_non_smoker = lm(formula = charges ~ age + children + region + sex, data = non_smokers)
 summary(mlr_full_non_smoker)
@@ -609,7 +527,8 @@ non_smokers %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
-Transformation
+Can we transform the response variable?
+
 ```{r}
 boxcox(mlr_full_non_smoker, c(-0.5, 0.5, 0.1))
 ```
@@ -620,6 +539,8 @@ non_smoker_transform$charges <- non_smoker_transform$charges^(-0.1)
 mlr_full_non_smoker_transform = lm(formula = charges ~ age + children + region + sex, data = non_smoker_transform)
 summary(mlr_full_non_smoker_transform)
 ```
+
+Residual plot of transformed response variable with forward selection for non smokers
 
 ```{r}
 yhat_full_non_smoker <- mlr_full_non_smoker_transform$fitted.values
@@ -651,12 +572,11 @@ ACF
 acf(mlr_full_smoker_transform$residuals, main="ACF")
 ```
 
-```{r}
-head(non_smokers)
-```
+## Dropping of outliers
+
+We transformed and tried many steps, but we can see that the outliers are actually small sub populations. It could be that they are some clients with preeixsting conditions, if that is the case they will follow a different trend and will be classified as outliers for our multiple linear regression model. 
 
 ```{r}
-# charges ~ age + children + region + sex
 non_smokers %>%
   ggplot(aes(x=age, y=charges, color=region, size=children)) + 
   theme_bw() +
@@ -664,19 +584,26 @@ non_smokers %>%
 ```
 
 
-## Lets drop these outliers. 
+Lets drop these outliers using dffits
+
 ```{r}
 drop_outleirs <- non_smokers
-DFFITS<-dffits(mlr_full_non_smoker)
-want_drop = names(DFFITS[abs(DFFITS)>2*sqrt(5/1064)])
-drop_outleirs = non_smokers[setdiff(rownames(non_smokers), want_drop),]
-(dim(non_smokers)[1] - dim(drop_outleirs)[1]) / dim(non_smokers)[1]
+DFFITS_drop1<-dffits(mlr_full_non_smoker)
+want_drop1 = names(DFFITS_drop1[abs(DFFITS_drop1)>2*sqrt(5/dim(non_smokers)[1])])
+drop_outleirs = non_smokers[setdiff(rownames(non_smokers), want_drop1),]
+percent_dropped = (dim(non_smokers)[1] - dim(drop_outleirs)[1]) / dim(non_smokers)[1]
+percent_dropped*100
 ```
+
+Make a multiple linear regression model after dropping the outliers
 
 ```{r}
 mlr_full_non_smoker_transform_drop = lm(formula = charges ~  region + age + children + sex, data = drop_outleirs)
 summary(mlr_full_non_smoker_transform_drop)
 ```
+
+
+Residual plot of the model constructed after dropping the first set of outliers
 
 ```{r}
 yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop$fitted.values
@@ -687,40 +614,25 @@ drop_outleirs %>%
   theme_bw() +
   geom_hline(yintercept = 0, color="red")
 ```
+
+Double checking EDA to see if the top section was fully dropped.
+
 ```{r}
 drop_outleirs %>%
   ggplot(aes(x=age, y=charges, color=region, size=children)) + 
   theme_bw() +
   geom_point(alpha=0.5)
 ```
-```{r}
-boxcox(mlr_full_non_smoker_transform_drop)
-```
-```{r}
-mlr_full_non_smoker_transform_drop2 = lm(formula = (charges)^0.5 ~ age + children + region + sex, data = drop_outleirs)
-summary(mlr_full_non_smoker_transform_drop2)
-```
 
-```{r}
-yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop2$fitted.values
-res_full_non_smoker <- mlr_full_non_smoker_transform_drop2$residuals
-drop_outleirs %>%
-  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
 
-## Second dropping
+Since not all points were dropped, lets try dropping again based on outliers for DFFITS.
 ```{r}
 drop_outleirs2 <- drop_outleirs
-DFFITS<-dffits(mlr_full_non_smoker_transform_drop2)
-want_drop = names(DFFITS[abs(DFFITS)>2*sqrt(5/975)])
-drop_outleirs2 = drop_outleirs[setdiff(rownames(drop_outleirs), want_drop),]
+DFFITS_drop2<-dffits(mlr_full_non_smoker_transform_drop)
+want_drop2 = names(DFFITS_drop2[abs(DFFITS_drop2)>2*sqrt(5/dim(drop_outleirs)[1])])
+drop_outleirs2 = drop_outleirs[setdiff(rownames(drop_outleirs), want_drop2),]
 (dim(drop_outleirs)[1] - dim(drop_outleirs2)[1]) / dim(drop_outleirs)[1]
 (dim(non_smokers)[1] - dim(drop_outleirs2)[1]) / dim(non_smokers)[1]
-
-head(drop_outleirs2)
 ```
 
 ```{r}
@@ -730,10 +642,39 @@ drop_outleirs2 %>%
 ```
 
 ```{r}
+mlr_full_non_smoker_transform_drop2 = lm(formula = charges ~  region + age + children + sex, data = drop_outleirs2)
+summary(mlr_full_non_smoker_transform_drop2)
+```
+
+```{r}
+yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop2$fitted.values
+res_full_non_smoker <- mlr_full_non_smoker_transform_drop2$residuals
+drop_outleirs2 %>%
+  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
+  geom_point() + 
+  theme_bw() +
+  geom_hline(yintercept = 0, color="red")
+```
+
+```{r}
+boxcox(mlr_full_non_smoker_transform_drop2)
+```
+
+```{r}
+{
+  qqnorm(mlr_full_non_smoker_transform_drop2$residuals)
+  qqline(mlr_full_non_smoker_transform_drop2$residuals, col="red")
+}
+```
+
+Final transformation
+
+```{r}
 mlr_full_non_smoker_transform_drop3 = lm(formula = (charges)^0.5 ~  region + age + children + sex, data = drop_outleirs2)
 summary(mlr_full_non_smoker_transform_drop3)
 ```
 
+Residual Plot
 ```{r}
 yhat_full_non_smoker <- mlr_full_non_smoker_transform_drop3$fitted.values
 res_full_non_smoker <- mlr_full_non_smoker_transform_drop3$residuals
@@ -744,9 +685,8 @@ drop_outleirs2 %>%
   geom_hline(yintercept = 0, color="red")
 ```
 
-```{r}
-boxcox(mlr_full_non_smoker_transform_drop3)
-```
+
+QQ PLOT
 
 ```{r}
 {
@@ -755,54 +695,6 @@ boxcox(mlr_full_non_smoker_transform_drop3)
 }
 ```
 
-
-## Next Steps
-We need to find for non smokers what is causing some data points to be more charges...?
-```{r}
-non_smokers %>%
-  ggplot(aes(x=age, y=charges, size=children, color=region)) + 
-  theme_bw() +
-  geom_point(alpha=0.5)
-```
-
-## Try checking log of age?
-
-```{r}
-mlr_full_non_smoker_log_age = lm(formula = (charges)^(-0.2) ~ log(age) + children + region + sex, data = non_smokers)
-summary(mlr_full_non_smoker_log_age)
-```
-
-```{r}
-yhat_full_non_smoker <- mlr_full_non_smoker_log_age$fitted.values
-res_full_non_smoker <- mlr_full_non_smoker_log_age$residuals
-non_smokers %>%
-  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
-
-```{r}
-boxcox(mlr_full_non_smoker_log_age, c(0,3,0.1))
-```
-
-
-## Interaction age and region?
-```{r}
-mlr_full_non_smoker_region_inter = lm(formula = charges ~ (age)*bmi + region + children + sex, data = non_smokers)
-summary(mlr_full_non_smoker_region_inter)
-```
-
-
-```{r}
-yhat_full_non_smoker <- mlr_full_non_smoker_region_inter$fitted.values
-res_full_non_smoker <- mlr_full_non_smoker_region_inter$residuals
-non_smokers %>%
-  ggplot(aes(yhat_full_non_smoker, res_full_non_smoker)) + 
-  geom_point() + 
-  theme_bw() +
-  geom_hline(yintercept = 0, color="red")
-```
 
 
 ## Logistic

@@ -47,6 +47,9 @@ plot(roc_result, main="ROC Curve for Penguins")
 lines(x = c(0,1), y = c(0,1), col="red")
 ```
 
+Since this ROC curve is above the diagonal line, the logistic regression performs better than
+random guessing.
+
 ## 1 - B
 
 ```{r}
@@ -68,8 +71,16 @@ From the table above we can compute the false positive rate, false negative rate
 
 * The false negative rate (FNR) is $\frac{4}{4 + 28} \rightarrow \frac{4}{32} \rightarrow 0.125$
 
+* The error rate is 1 - accuracy = $1 - \frac{28 + 28}{28+28+7+4} = 1 - \frac{56}{67} = 1 - 0.8358209 = 0.1641791$
+
 ## 1 - D
 
+```{r}
+test<-data.frame(test,preds)
+ggplot(test,aes(x=preds))+
+geom_density()+
+labs(title="Density Plot of Predicted Probs")
+```
 
-
+I personally don't believe the threshold needs to be changed. Sometimes threshold needs to be changed depending on the context of the analysis being done, but in this case increasing and decreasing doesn't make a huge difference in context of the problem. Also the Density plot shows that there is no huge difference in the prediction (probabilities), which means that 0.5 is a decent threshold. 
 
